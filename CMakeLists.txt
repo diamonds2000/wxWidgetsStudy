@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(wxWidgetDemo)
+project(wxWidgetsStudy)
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
@@ -11,13 +11,42 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Set debug flags for better debugging experience
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
-set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+if(WIN32)
+    # MSVC compiler flags for debugging
+    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
+    set(CMAKE_C_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
+    # Enable full debug info in PDB
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG:FULL /INCREMENTAL:NO")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG:FULL /INCREMENTAL:NO")
+    
+    # MSVC compiler flags for release
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
+    set(CMAKE_C_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
+    # Release linker flags
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
+else()
+    # GCC/Clang flags for debugging
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+    
+    # GCC/Clang flags for release
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra")
+endif()
 
 # Platform-specific configuration
 if(WIN32)
     # Windows-specific wxWidgets configuration
-    set(WXWIDGETS_ROOT "D:/DevCode/wxWidgets")
+    # Use environment variable WXWIDGETS or fallback to default path
+    if(DEFINED ENV{WXWIDGETS})
+        set(WXWIDGETS_ROOT "$ENV{WXWIDGETS}")
+        message(STATUS "Using wxWidgets from environment variable: ${WXWIDGETS_ROOT}")
+    else()
+        set(WXWIDGETS_ROOT "D:/DevCode/wxWidgets")
+        message(WARNING "WXWIDGETS environment variable not set. Using default: ${WXWIDGETS_ROOT}")
+    endif()
+    
     set(WXWIDGETS_LIB_DIR "${WXWIDGETS_ROOT}/lib/vc14x_x64_dll")
     set(WXWIDGETS_INCLUDE_DIR "${WXWIDGETS_ROOT}/include")
     set(WXWIDGETS_SETUP_DIR "${WXWIDGETS_LIB_DIR}/mswud")
