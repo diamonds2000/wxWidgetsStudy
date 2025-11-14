@@ -1,23 +1,35 @@
 cmake_minimum_required(VERSION 3.10)
 project(wxWidgetsStudy)
 
+
 # Set C++ standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_STANDARD 11)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set default build type to Debug if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-# Set debug flags for better debugging experience
+# compiler flag configuration
 if(WIN32)
+	if(MSVC_TOOLSET_VERSION EQUAL 120)
+		set(WXGIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}_x64")
+	else()
+		set(WXGIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}x_x64")
+	endif()
+
+	message(STATUS "WXGIDGETS_LIB_PREFIX = ${WXGIDGETS_LIB_PREFIX}")
+	
+	# Add preprocessor definitions for Windows
+    add_definitions(-DWXUSINGDLL -D__WXMSW__ -D__WXDEBUG__ -DwxUSE_UNICODE)
+	
     # MSVC compiler flags for debugging
     set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
     set(CMAKE_C_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
     # Enable full debug info in PDB
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG:FULL /INCREMENTAL:NO")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG:FULL /INCREMENTAL:NO")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
     
     # MSVC compiler flags for release
     set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
@@ -35,8 +47,11 @@ else()
     set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra")
 endif()
 
-# Platform-specific configuration
+# SDK path configuration
 if(WIN32)
+	message(STATUS "MSVC_VERSION = ${MSVC_VERSION}.")
+	message(STATUS "MSVC_TOOLSET_VERSION = ${MSVC_TOOLSET_VERSION}.")
+	
     # Windows-specific wxWidgets configuration
     # Use environment variable WXWIDGETS or fallback to default path
     if(DEFINED ENV{WXWIDGETS})
@@ -47,16 +62,13 @@ if(WIN32)
         message(WARNING "WXWIDGETS environment variable not set. Using default: ${WXWIDGETS_ROOT}")
     endif()
     
-    set(WXWIDGETS_LIB_DIR "${WXWIDGETS_ROOT}/lib/vc14x_x64_dll")
+    set(WXWIDGETS_LIB_DIR "${WXWIDGETS_ROOT}/lib/${WXGIDGETS_LIB_PREFIX}_dll")
     set(WXWIDGETS_INCLUDE_DIR "${WXWIDGETS_ROOT}/include")
     set(WXWIDGETS_SETUP_DIR "${WXWIDGETS_LIB_DIR}/mswud")
     
     # Add include directories for Windows
     include_directories(${WXWIDGETS_INCLUDE_DIR})
     include_directories(${WXWIDGETS_SETUP_DIR})
-    
-    # Add preprocessor definitions for Windows
-    add_definitions(-DWXUSINGDLL -D__WXMSW__ -D__WXDEBUG__)
 else()
     # Linux/Unix - try to find wxWidgets
     # First try the standard FindwxWidgets module
@@ -145,13 +157,13 @@ set_target_properties(wxWidgetDemo PROPERTIES
 if(WIN32)
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_core_vc14x_x64.dll"
+        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_core_${WXGIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WXWIDGETS_LIB_DIR}/wxbase32ud_vc14x_x64.dll"
+        "${WXWIDGETS_LIB_DIR}/wxbase32ud_${WXGIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 endif()

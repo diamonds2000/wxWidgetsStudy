@@ -1,4 +1,4 @@
-#include "MainFrame.h"
+﻿#include "MainFrame.h"
 #include <wx/msgdlg.h>
 #include <wx/filedlg.h>
 #include <wx/textdlg.h>
@@ -248,7 +248,7 @@ void MainFrame::OnAbout(wxCommandEvent& event)
                  "• Splitter windows\n"
                  "• Status bar\n"
                  "• Dialog boxes\n\n"
-                 "Built with wxWidgets " wxVERSION_STRING,
+                 "Built with wxWidgets " ,
                  "About wxWidgets Demo",
                  wxOK | wxICON_INFORMATION);
 }
