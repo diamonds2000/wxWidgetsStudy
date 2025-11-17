@@ -2,8 +2,8 @@
 #define DRAWINGPANEL_H
 
 #include <wx/wx.h>
-#include <wx/panel.h>
-#include <wx/dcbuffer.h>
+#include <wx/glcanvas.h>
+//#include <wx/glutils.h>
 #include <vector>
 
 // Structure to represent a drawing stroke
@@ -18,13 +18,14 @@ struct DrawingStroke
     }
 };
 
-class DrawingPanel : public wxPanel
+class DrawingPanel : public wxGLCanvas
 {
 public:
     DrawingPanel(wxWindow* parent);
+    ~DrawingPanel();
 
     // Drawing controls
-    void SetDrawingColor(const wxColour& color) { m_currentColor = color; }
+    void SetDrawingColor(const wxColour& color);
     void SetPenWidth(int width) { m_currentWidth = width; }
     void ClearDrawing();
 
@@ -33,13 +34,15 @@ public:
     int GetPenWidth() const { return m_currentWidth; }
 
 private:
+    // OpenGL context
+    wxGLContext* m_context;
+    
     // Event handlers
     void OnPaint(wxPaintEvent& event);
     void OnMouseDown(wxMouseEvent& event);
     void OnMouseMove(wxMouseEvent& event);
     void OnMouseUp(wxMouseEvent& event);
     void OnSize(wxSizeEvent& event);
-    void OnEraseBackground(wxEraseEvent& event) { /* Do nothing to reduce flicker */ }
 
     // Drawing state
     bool m_isDrawing;
@@ -51,12 +54,15 @@ private:
     std::vector<DrawingStroke> m_strokes;
     DrawingStroke m_currentStroke;
 
-    // Buffered drawing
-    wxBitmap m_bitmap;
+    // OpenGL state
     bool m_needsRedraw;
+    int m_width, m_height;
 
-    void InitializeDrawing();
-    void DrawStroke(wxDC& dc, const DrawingStroke& stroke);
+    // OpenGL initialization and rendering
+    void InitializeOpenGL();
+    void Render();
+    void SetupViewport();
+    void DrawStroke(const DrawingStroke& stroke);
     void RedrawAll();
 
     DECLARE_EVENT_TABLE()

@@ -1,166 +1,53 @@
 #include "DrawingPanel.h"
-#include <wx/dcclient.h>
+#include <GL/gl.h>
 
 // Event table
-wxBEGIN_EVENT_TABLE(DrawingPanel, wxPanel)
+wxBEGIN_EVENT_TABLE(DrawingPanel, wxGLCanvas)
 EVT_PAINT(DrawingPanel::OnPaint)
 EVT_LEFT_DOWN(DrawingPanel::OnMouseDown)
 EVT_MOTION(DrawingPanel::OnMouseMove)
 EVT_LEFT_UP(DrawingPanel::OnMouseUp)
 EVT_SIZE(DrawingPanel::OnSize)
-EVT_ERASE_BACKGROUND(DrawingPanel::OnEraseBackground)
 wxEND_EVENT_TABLE()
 
 DrawingPanel::DrawingPanel(wxWindow* parent)
-    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE)
+    : wxGLCanvas(parent, wxID_ANY)
     , m_isDrawing(false)
     , m_currentColor(*wxBLACK)
     , m_currentWidth(2)
     , m_needsRedraw(true)
+    , m_width(0)
+    , m_height(0)
 {
-    SetBackgroundColour(*wxWHITE);
-    SetBackgroundStyle(wxBG_STYLE_CUSTOM); // For better performance
+    // Create OpenGL context
+    m_context = new wxGLContext(this);
+    if (!m_context->IsOK()) {
+        wxMessageBox("Failed to create OpenGL context!");
+        delete m_context;
+        m_context = nullptr;
+    }
 
-    // Initialize the drawing bitmap
-    InitializeDrawing();
-}
-
-void DrawingPanel::InitializeDrawing()
-{
+    // Get initial size
     wxSize size = GetSize();
-    if (size.x > 0 && size.y > 0)
-    {
-        m_bitmap = wxBitmap(size.x, size.y);
+    m_width = size.x > 0 ? size.x : 640;
+    m_height = size.y > 0 ? size.y : 480;
 
-        // Clear the bitmap with white background
-        wxMemoryDC memDC(m_bitmap);
-        memDC.SetBackground(*wxWHITE_BRUSH);
-        memDC.Clear();
-
-        m_needsRedraw = true;
-    }
-}
-
-void DrawingPanel::OnPaint(wxPaintEvent& event)
-{
-    wxAutoBufferedPaintDC dc(this);
-
-    if (!m_bitmap.IsOk())
-    {
-        InitializeDrawing();
-        return;
-    }
-
-    if (m_needsRedraw)
-    {
-        RedrawAll();
-        m_needsRedraw = false;
-    }
-
-    // Draw the bitmap to screen
-    dc.DrawBitmap(m_bitmap, 0, 0);
-
-    // If currently drawing, draw the current stroke
-    if (m_isDrawing && !m_currentStroke.points.empty())
-    {
-        DrawStroke(dc, m_currentStroke);
-    }
-}
-
-void DrawingPanel::OnMouseDown(wxMouseEvent& event)
-{
-    if (event.LeftIsDown())
-    {
-        m_isDrawing = true;
-        m_lastPoint = event.GetPosition();
-
-        // Start a new stroke
-        m_currentStroke = DrawingStroke(m_currentColor, m_currentWidth);
-        m_currentStroke.points.push_back(m_lastPoint);
-
-        CaptureMouse();
-    }
-}
-
-void DrawingPanel::OnMouseMove(wxMouseEvent& event)
-{
-    if (m_isDrawing && event.LeftIsDown())
-    {
-        wxPoint currentPoint = event.GetPosition();
-        m_currentStroke.points.push_back(currentPoint);
-
-        // Draw line from last point to current point
-        wxClientDC dc(this);
-        dc.SetPen(wxPen(m_currentColor, m_currentWidth, wxPENSTYLE_SOLID));
-        dc.DrawLine(m_lastPoint, currentPoint);
-
-        // Also draw to the bitmap
-        wxMemoryDC memDC(m_bitmap);
-        memDC.SetPen(wxPen(m_currentColor, m_currentWidth, wxPENSTYLE_SOLID));
-        memDC.DrawLine(m_lastPoint, currentPoint);
-
-        m_lastPoint = currentPoint;
-    }
-}
-
-void DrawingPanel::OnMouseUp(wxMouseEvent& event)
-{
-    if (m_isDrawing)
-    {
-        m_isDrawing = false;
-
-        if (HasCapture())
-            ReleaseMouse();
-
-        // Save the completed stroke
-        if (!m_currentStroke.points.empty())
-        {
-            m_strokes.push_back(m_currentStroke);
+    // Initialize OpenGL when the panel is shown
+    Bind(wxEVT_SHOW, [this](wxShowEvent& event) {
+        if (event.IsShown()) {
+            InitializeOpenGL();
         }
-
-        m_currentStroke.points.clear();
-
-        // Force a repaint
-        Refresh();
-    }
+    });
 }
 
-void DrawingPanel::OnSize(wxSizeEvent& event)
+DrawingPanel::~DrawingPanel()
 {
-    // Recreate bitmap when panel is resized
-    InitializeDrawing();
-    event.Skip();
+    delete m_context;
 }
 
-void DrawingPanel::DrawStroke(wxDC& dc, const DrawingStroke& stroke)
+void DrawingPanel::SetDrawingColor(const wxColour& color)
 {
-    if (stroke.points.size() < 2)
-        return;
-
-    dc.SetPen(wxPen(stroke.color, stroke.width, wxPENSTYLE_SOLID));
-
-    for (size_t i = 1; i < stroke.points.size(); ++i)
-    {
-        dc.DrawLine(stroke.points[i - 1], stroke.points[i]);
-    }
-}
-
-void DrawingPanel::RedrawAll()
-{
-    if (!m_bitmap.IsOk())
-        return;
-
-    wxMemoryDC memDC(m_bitmap);
-
-    // Clear background
-    memDC.SetBackground(*wxGREEN_BRUSH);
-    memDC.Clear();
-
-    // Draw all strokes
-    for (const auto& stroke : m_strokes)
-    {
-        DrawStroke(memDC, stroke);
-    }
+    m_currentColor = color;
 }
 
 void DrawingPanel::ClearDrawing()
@@ -168,14 +55,164 @@ void DrawingPanel::ClearDrawing()
     m_strokes.clear();
     m_currentStroke.points.clear();
     m_needsRedraw = true;
+    Refresh();
+}
 
-    // Clear the bitmap
-    if (m_bitmap.IsOk())
-    {
-        wxMemoryDC memDC(m_bitmap);
-        memDC.SetBackground(*wxWHITE_BRUSH);
-        memDC.Clear();
+void DrawingPanel::InitializeOpenGL()
+{
+    if (!m_context) return;
+
+    // Set as the current OpenGL context
+    SetCurrent(*m_context);
+
+    // Set up basic OpenGL settings
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // White background
+    glEnable(GL_LINE_SMOOTH);              // Anti-aliased lines
+    glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+    glLineWidth(m_currentWidth);
+    
+    // Set up viewport
+    SetupViewport();
+}
+
+void DrawingPanel::SetupViewport()
+{
+    if (!m_context) return;
+    SetCurrent(*m_context);
+    
+    glViewport(0, 0, m_width, m_height);
+    
+    // Set up orthographic projection
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(0, m_width, m_height, 0, -1, 1); // Y-axis inverted for screen coordinates
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+void DrawingPanel::OnPaint(wxPaintEvent& event)
+{
+    wxPaintDC(this); // Required for wxGLCanvas
+    
+    if (!m_context) return;
+    
+    SetCurrent(*m_context);
+    
+    // Initialize OpenGL if not already done
+    static bool initialized = false;
+    if (!initialized) {
+        InitializeOpenGL();
+        initialized = true;
     }
+    
+    Render();
+    SwapBuffers(); // Swap front and back buffers
+}
 
+void DrawingPanel::OnSize(wxSizeEvent& event)
+{
+    wxSize size = event.GetSize();
+    m_width = size.x;
+    m_height = size.y;
+    
+    if (m_width > 0 && m_height > 0) {
+        if (m_context) {
+            SetCurrent(*m_context);
+            SetupViewport();
+        }
+        m_needsRedraw = true;
+        Refresh();
+    }
+    
+    event.Skip();
+}
+
+void DrawingPanel::OnMouseDown(wxMouseEvent& event)
+{
+    if (event.LeftIsDown()) {
+        m_isDrawing = true;
+        m_lastPoint = event.GetPosition();
+        
+        // Start a new stroke
+        m_currentStroke = DrawingStroke(m_currentColor, m_currentWidth);
+        m_currentStroke.points.push_back(m_lastPoint);
+        
+        CaptureMouse();
+    }
+}
+
+void DrawingPanel::OnMouseMove(wxMouseEvent& event)
+{
+    if (m_isDrawing && event.LeftIsDown()) {
+        wxPoint currentPoint = event.GetPosition();
+        m_currentStroke.points.push_back(currentPoint);
+        
+        // Force a repaint to show the current stroke
+        Refresh();
+        
+        m_lastPoint = currentPoint;
+    }
+}
+
+void DrawingPanel::OnMouseUp(wxMouseEvent& event)
+{
+    if (m_isDrawing) {
+        m_isDrawing = false;
+        
+        if (HasCapture())
+            ReleaseMouse();
+        
+        // Save the completed stroke
+        if (!m_currentStroke.points.empty()) {
+            m_strokes.push_back(m_currentStroke);
+        }
+        
+        m_currentStroke.points.clear();
+        
+        // Force a repaint
+        Refresh();
+    }
+}
+
+void DrawingPanel::Render()
+{
+    if (!m_context) return;
+    
+    // Clear the color buffer
+    glClear(GL_COLOR_BUFFER_BIT);
+    
+    // Redraw all saved strokes
+    for (const auto& stroke : m_strokes) {
+        DrawStroke(stroke);
+    }
+    
+    // Draw the current stroke if we're drawing
+    if (m_isDrawing && !m_currentStroke.points.empty()) {
+        DrawStroke(m_currentStroke);
+    }
+    
+    // Flush OpenGL commands
+    glFlush();
+}
+
+void DrawingPanel::DrawStroke(const DrawingStroke& stroke)
+{
+    if (stroke.points.size() < 2) return;
+    
+    // Set line color and width
+    glColor3ub(stroke.color.Red(), stroke.color.Green(), stroke.color.Blue());
+    glLineWidth(stroke.width);
+    
+    // Draw the stroke as a line strip
+    glBegin(GL_LINE_STRIP);
+    for (const auto& point : stroke.points) {
+        glVertex2i(point.x, point.y);
+    }
+    glEnd();
+}
+
+void DrawingPanel::RedrawAll()
+{
+    m_needsRedraw = true;
     Refresh();
 }

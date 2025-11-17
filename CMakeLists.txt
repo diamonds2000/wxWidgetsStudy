@@ -11,6 +11,11 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+find_package(OpenGL REQUIRED)
+if(NOT OPENGL_FOUND)
+    message(FATAL_ERROR "OpenGL is not found")
+endif()
+
 # compiler flag configuration
 if(WIN32)
 	if(MSVC_TOOLSET_VERSION EQUAL 120)
@@ -127,16 +132,21 @@ endif()
 # Platform-specific linking
 if(WIN32)
     # Link libraries for Windows
+    
     target_link_libraries(wxWidgetDemo 
         ${WXWIDGETS_LIB_DIR}/wxmsw32ud_core.lib
         ${WXWIDGETS_LIB_DIR}/wxbase32ud.lib
+        ${WXWIDGETS_LIB_DIR}/wxmsw32ud_gl.lib
         # Windows system libraries
         comctl32.lib
         rpcrt4.lib
         winmm.lib
         advapi32.lib
         wsock32.lib
+        opengl32.lib
+        glu32.lib
     )
+
 else()
     # Link libraries for Linux
     if(wxWidgets_FOUND)
@@ -164,6 +174,12 @@ if(WIN32)
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${WXWIDGETS_LIB_DIR}/wxbase32ud_${WXGIDGETS_LIB_PREFIX}.dll"
+        $<TARGET_FILE_DIR:wxWidgetDemo>
+    )
+
+    add_custom_command(TARGET wxWidgetDemo POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_gl_${WXGIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 endif()
