@@ -77,7 +77,7 @@ if(WIN32)
 else()
     # Linux/Unix - try to find wxWidgets
     # First try the standard FindwxWidgets module
-    find_package(wxWidgets COMPONENTS core base)
+    find_package(wxWidgets COMPONENTS core base gl)
     
     if(wxWidgets_FOUND)
         # Use standard FindwxWidgets
@@ -87,7 +87,7 @@ else()
         # Fallback to pkg-config
         find_package(PkgConfig)
         if(PKG_CONFIG_FOUND)
-            pkg_check_modules(WXWIDGETS REQUIRED wx_gtk3u_core-3.2 wx_baseu-3.2)
+            pkg_check_modules(WXWIDGETS REQUIRED wx_gtk3u_core-3.2 wx_baseu-3.2 wx_gtk3u_gl-3.2)
             
             # Add include directories for Linux
             include_directories(${WXWIDGETS_INCLUDE_DIRS})
