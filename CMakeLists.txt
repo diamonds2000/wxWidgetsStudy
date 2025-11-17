@@ -44,12 +44,12 @@ if(WIN32)
     set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
 else()
     # GCC/Clang flags for debugging
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
-    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
+    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall")
     
     # GCC/Clang flags for release
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall -Wextra")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
 endif()
 
 # SDK path configuration

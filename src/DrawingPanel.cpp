@@ -11,7 +11,7 @@ EVT_SIZE(DrawingPanel::OnSize)
 wxEND_EVENT_TABLE()
 
 DrawingPanel::DrawingPanel(wxWindow* parent)
-    : wxGLCanvas(parent, wxID_ANY)
+    : wxGLCanvas(parent, wxID_ANY, nullptr, wxDefaultPosition, wxDefaultSize, 0)
     , m_isDrawing(false)
     , m_currentColor(*wxBLACK)
     , m_currentWidth(2)
@@ -21,7 +21,7 @@ DrawingPanel::DrawingPanel(wxWindow* parent)
 {
     // Create OpenGL context
     m_context = new wxGLContext(this);
-    if (!m_context->IsOK()) {
+    if (!m_context) {
         wxMessageBox("Failed to create OpenGL context!");
         delete m_context;
         m_context = nullptr;
