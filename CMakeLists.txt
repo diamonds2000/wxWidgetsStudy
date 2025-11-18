@@ -151,10 +151,10 @@ else()
     # Link libraries for Linux
     if(wxWidgets_FOUND)
         # Use standard wxWidgets linking
-        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
     else()
         # Use pkg-config libraries
-        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES})
     endif()
 endif()
 

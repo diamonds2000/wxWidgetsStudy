@@ -60,7 +60,7 @@ void DrawingPanel::ClearDrawing()
 
 void DrawingPanel::InitializeOpenGL()
 {
-    if (!m_context) return;
+    if (!m_context && !IsShown()) return;
 
     // Set as the current OpenGL context
     SetCurrent(*m_context);
@@ -77,7 +77,7 @@ void DrawingPanel::InitializeOpenGL()
 
 void DrawingPanel::SetupViewport()
 {
-    if (!m_context) return;
+    if (!m_context && !IsShown()) return;
     SetCurrent(*m_context);
     
     glViewport(0, 0, m_width, m_height);
@@ -94,7 +94,7 @@ void DrawingPanel::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC(this); // Required for wxGLCanvas
     
-    if (!m_context) return;
+    if (!m_context && !IsShown()) return;
     
     SetCurrent(*m_context);
     
