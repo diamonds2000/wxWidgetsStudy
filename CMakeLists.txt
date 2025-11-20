@@ -83,6 +83,7 @@ else()
         # Use standard FindwxWidgets
         include(${wxWidgets_USE_FILE})
         add_definitions(-D__WXGTK__)
+        add_definitions(-DwxUSE_UNICODE)
     else()
         # Fallback to pkg-config
         find_package(PkgConfig)

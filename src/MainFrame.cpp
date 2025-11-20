@@ -1,4 +1,4 @@
-﻿#include "MainFrame.h"
+#include "MainFrame.h"
 #include <wx/msgdlg.h>
 #include <wx/filedlg.h>
 #include <wx/textdlg.h>

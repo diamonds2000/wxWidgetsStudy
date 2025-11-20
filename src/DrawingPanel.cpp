@@ -60,7 +60,7 @@ void DrawingPanel::ClearDrawing()
 
 void DrawingPanel::InitializeOpenGL()
 {
-    if (!m_context && !IsShown()) return;
+    if (!m_context || !IsShownOnScreen()) return; // Ensure the context exists and the window is fully shown
 
     // Set as the current OpenGL context
     SetCurrent(*m_context);
@@ -70,18 +70,19 @@ void DrawingPanel::InitializeOpenGL()
     glEnable(GL_LINE_SMOOTH);              // Anti-aliased lines
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
     glLineWidth(m_currentWidth);
-    
+
     // Set up viewport
     SetupViewport();
 }
 
 void DrawingPanel::SetupViewport()
 {
-    if (!m_context && !IsShown()) return;
+    if (!m_context || !IsShownOnScreen()) return; // Ensure the context exists and the window is fully shown
+
     SetCurrent(*m_context);
-    
+
     glViewport(0, 0, m_width, m_height);
-    
+
     // Set up orthographic projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -94,7 +95,7 @@ void DrawingPanel::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC(this); // Required for wxGLCanvas
     
-    if (!m_context && !IsShown()) return;
+    if (!m_context || !IsShownOnScreen()) return;
     
     SetCurrent(*m_context);
     
@@ -116,7 +117,8 @@ void DrawingPanel::OnSize(wxSizeEvent& event)
     m_height = size.y;
     
     if (m_width > 0 && m_height > 0) {
-        if (m_context) {
+        if (m_context && IsShownOnScreen()) 
+        {
             SetCurrent(*m_context);
             SetupViewport();
         }
