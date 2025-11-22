@@ -122,7 +122,6 @@ add_executable(wxWidgetDemo ${WIN32_FLAG}
         src/DrawingPanel.cpp
         src/DrawingPanel.h
         src/render/Point3D.h
-        src/render/Point3D.cpp
         src/render/RenderObject.cpp
         src/render/Sphere.cpp
         src/render/RenderObject.h
