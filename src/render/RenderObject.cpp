@@ -29,6 +29,14 @@ void RenderObject::createDefaultNormal()
 {
     m_normals.clear();
 
+    if (m_vertices.size() == 3)
+    {
+        m_normals.push_back(PointDouble3D(0.0, 0.0, 1.0));
+        m_normals.push_back(PointDouble3D(0.0, 0.0, 1.0));
+        m_normals.push_back(PointDouble3D(0.0, 0.0, 1.0));
+        return;
+    }
+
     // compute face normal for the triangle that contains this vertex
     for (size_t i = 0; i < m_vertices.size(); ++i)
     {
@@ -70,20 +78,10 @@ void RenderObject::cleanupVBO()
 {
     if (m_useVBO)
     {
-        if (m_vboVertices)
+        if (m_vbo)
         {
-            glDeleteBuffers(1, &m_vboVertices);
-            m_vboVertices = 0;
-        }
-        if (m_vboNormals)
-        {
-            glDeleteBuffers(1, &m_vboNormals);
-            m_vboNormals = 0;
-        }
-        if (m_vboColors)
-        {
-            glDeleteBuffers(1, &m_vboColors);
-            m_vboColors = 0;
+            glDeleteBuffers(1, &m_vbo);
+            m_vbo = 0;
         }
 
         m_vboCount = 0;
@@ -140,100 +138,52 @@ void RenderObject::RenderWithVBO()
 
     m_vboCount = m_vertices.size();
 
-    std::vector<float> vertBuf;
-    vertBuf.reserve(m_vboCount * 3);
-    for (const auto &v : m_vertices)
+    size_t bufferCount = m_vboCount * 3 * 3;  //interleaved buffer
+    std::vector<float> buffer;
+    buffer.reserve(bufferCount);
+    for (size_t i = 0; i < m_vboCount; ++i)
     {
-        vertBuf.push_back((float)v.x);
-        vertBuf.push_back((float)v.y);
-        vertBuf.push_back((float)v.z);
+        const auto &v = m_vertices[i];
+        const auto &n = m_normals[i];
+        const auto &c = hasPerVertexColors ? m_colors[i] : m_color;
+
+        // Vertex
+        buffer.push_back((float)v.x);
+        buffer.push_back((float)v.y);
+        buffer.push_back((float)v.z);
+
+        // Normal
+        buffer.push_back((float)n.x);
+        buffer.push_back((float)n.y);
+        buffer.push_back((float)n.z);
+
+        // Color
+        buffer.push_back((float)c.x);
+        buffer.push_back((float)c.y);
+        buffer.push_back((float)c.z);
     }
 
-    std::vector<float> normalBuf;
-    normalBuf.reserve(m_vboCount * 3);
-    for (const auto &n : m_normals)
-    {
-        normalBuf.push_back((float)n.x);
-        normalBuf.push_back((float)n.y);
-        normalBuf.push_back((float)n.z);
-    }
+    glGenBuffers(1, &m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, buffer.size() * sizeof(float), buffer.data(), GL_STATIC_DRAW);
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-    std::vector<float> colorBuf;
-    if (hasPerVertexColors)
-    {
-        colorBuf.reserve(m_vboCount * 3);
-        for (const auto &c : m_colors)
-        {
-            colorBuf.push_back((float)c.x);
-            colorBuf.push_back((float)c.y);
-            colorBuf.push_back((float)c.z);
-        }
-    }
-    else
-    {
-        colorBuf.reserve(m_vboCount * 3);
-        for (size_t i = 0; i < m_vboCount; ++i)
-        {
-            colorBuf.push_back((float)m_color.x);
-            colorBuf.push_back((float)m_color.y);
-            colorBuf.push_back((float)m_color.z);
-        }
-    }
+    GLsizei stride = 9 * sizeof(float);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glVertexPointer(3, GL_FLOAT, stride, reinterpret_cast<void*>(0));
 
-    glGenBuffers(1, &m_vboVertices);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vboVertices);
-    glBufferData(GL_ARRAY_BUFFER, vertBuf.size() * sizeof(float), vertBuf.data(), GL_STATIC_DRAW);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glNormalPointer(GL_FLOAT, stride, reinterpret_cast<void*>(3 * sizeof(float)));
 
-    glGenBuffers(1, &m_vboColors);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vboColors);
-    glBufferData(GL_ARRAY_BUFFER, colorBuf.size() * sizeof(float), colorBuf.data(), GL_STATIC_DRAW);
-
-    glGenBuffers(1, &m_vboNormals);
-    glBindBuffer(GL_ARRAY_BUFFER, m_vboNormals);
-    glBufferData(GL_ARRAY_BUFFER, normalBuf.size() * sizeof(float), normalBuf.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    if (m_vboVertices)
-    {
-        glEnableClientState(GL_VERTEX_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboVertices);
-        glVertexPointer(3, GL_FLOAT, 0, (void*)0);
-    }
-
-    if (m_vboNormals)
-    {
-        glEnableClientState(GL_NORMAL_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboNormals);
-        glNormalPointer(GL_FLOAT, 0, (void*)0);
-    }
-
-    if (m_vboColors)
-    {
-        glEnableClientState(GL_COLOR_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, m_vboColors);
-        glColorPointer(3, GL_FLOAT, 0, (void*)0);
-    }
+    glEnableClientState(GL_COLOR_ARRAY);
+    glColorPointer(3, GL_FLOAT, stride, reinterpret_cast<void*>(6 * sizeof(float)));
 
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vboCount);
 
-    if (m_vboColors)
-    {
-        glDisableClientState(GL_COLOR_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-
-    if (m_vboNormals)
-    {
-        glDisableClientState(GL_NORMAL_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-
-    if (m_vboVertices)
-    {
-        glDisableClientState(GL_VERTEX_ARRAY);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
+    glDisableClientState(GL_COLOR_ARRAY);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void RenderObject::RenderWithClientArray()

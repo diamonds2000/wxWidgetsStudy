@@ -54,9 +54,7 @@ protected:
     std::vector<std::shared_ptr<RenderObject>> m_children;
 
     // VBO support
-    GLuint m_vboVertices = 0;
-    GLuint m_vboNormals = 0;
-    GLuint m_vboColors = 0;
+    GLuint m_vbo = 0;
     size_t m_vboCount = 0;
     bool m_useClientArray = false;
     bool m_useVBO = true; // can be toggled for systems without VBO support
