@@ -16,6 +16,11 @@ if(NOT OPENGL_FOUND)
     message(FATAL_ERROR "OpenGL is not found")
 endif()
 
+find_package(GLEW REQUIRED)
+if(NOT GLEW_FOUND)
+    message(FATAL_ERROR "GLEW is not found")
+endif()
+
 # compiler flag configuration
 if(WIN32)
 	if(MSVC_TOOLSET_VERSION EQUAL 120)
@@ -78,6 +83,8 @@ else()
     # Linux/Unix - try to find wxWidgets
     # First try the standard FindwxWidgets module
     find_package(wxWidgets COMPONENTS core base gl)
+
+    include_directories(${GLEW_INCLUDE_DIRS})
     
     if(wxWidgets_FOUND)
         # Use standard FindwxWidgets
@@ -149,10 +156,10 @@ else()
     # Link libraries for Linux
     if(wxWidgets_FOUND)
         # Use standard wxWidgets linking
-        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
     else()
         # Use pkg-config libraries
-        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
     endif()
 endif()
 

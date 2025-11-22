@@ -1,6 +1,7 @@
 #ifndef DRAWINGPANEL_H
 #define DRAWINGPANEL_H
 
+#include <GL/glew.h>
 #include <wx/wx.h>
 #include <wx/glcanvas.h>
 //#include <wx/glutils.h>
@@ -35,7 +36,7 @@ public:
     // Getters
     wxColour GetDrawingColor() const { return m_currentColor; }
     int GetPenWidth() const { return m_currentWidth; }
-    
+
     void setLight();
 
 private:

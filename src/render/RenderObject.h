@@ -1,4 +1,6 @@
 #pragma once
+#include <GL/glew.h>
+#include <GL/gl.h>
 
 #include <vector>
 #include <string>
@@ -40,6 +42,8 @@ public:
 
     virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
 
+    void createDefaultNormal();
+
 protected:
     std::string m_name;
 
@@ -52,4 +56,14 @@ protected:
     PointDouble3D m_position;
 
     std::vector<std::shared_ptr<RenderObject>> m_children;
+
+    // VBO support
+    GLuint m_vboVertices = 0;
+    GLuint m_vboNormals = 0;
+    GLuint m_vboColors = 0;
+    size_t m_vboCount = 0;
+    bool m_vboInitialized = false;
+    bool m_useVBO = true; // can be toggled for systems without VBO support
+
+    void cleanupVBO();
 };

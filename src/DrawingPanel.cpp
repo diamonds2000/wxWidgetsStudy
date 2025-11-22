@@ -1,5 +1,5 @@
+#include <GL/glew.h>
 #include "DrawingPanel.h"
-#include <GL/gl.h>
 #include <GL/glu.h>
 #include<algorithm> 
 
@@ -71,6 +71,12 @@ void DrawingPanel::InitializeOpenGL()
 
     // Set as the current OpenGL context
     SetCurrent(*m_context);
+
+    if (glewInit() != GLEW_OK) 
+    {
+        std::cerr << "Failed to initialize GLEW" << std::endl;
+        return;
+    }
 
     // Set up basic OpenGL settings
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // White background
