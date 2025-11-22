@@ -11,11 +11,11 @@ public:
     explicit PointFloat3D(double dx, double dy, double dz)
         : x((float)dx), y((float)dy), z((float)dz) {}
 
-    explicit PointFloat3D(const PointFloat3D& pf)
+    PointFloat3D(const PointFloat3D& pf)
         : x(pf.x), y(pf.y), z(pf.z) {}
 
     // conversion from double-version (defined later)
-    explicit PointFloat3D(const class PointDouble3D& pd);
+    PointFloat3D(const class PointDouble3D& pd);
 
     PointFloat3D& operator=(const PointFloat3D& pf)
     {
@@ -58,10 +58,10 @@ public:
     explicit PointDouble3D(float fx, float fy, float fz)
         : x((double)fx), y((double)fy), z((double)fz) {}
 
-    explicit PointDouble3D(const PointDouble3D& pd)
+    PointDouble3D(const PointDouble3D& pd)
         : x(pd.x), y(pd.y), z(pd.z) {}
 
-    explicit PointDouble3D(const PointFloat3D& pf)
+    PointDouble3D(const PointFloat3D& pf)
         : x((double)pf.x), y((double)pf.y), z((double)pf.z) {}
 
     PointDouble3D& operator=(const PointDouble3D& pd)

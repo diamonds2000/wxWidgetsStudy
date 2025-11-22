@@ -1,6 +1,7 @@
 #include "RenderObject.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
+#include <cmath>
 
 
 RenderObject::RenderObject(const std::string& name)
@@ -19,8 +20,41 @@ void RenderObject::createDefaultNormal()
 {
     m_normals.clear();
 
-    //calculate default normal for each vertex
-    m_normals.resize(m_vertices.size(), PointDouble3D(0.0, 0.0, 1.0));
+    // compute face normal for the triangle that contains this vertex
+    for (size_t i = 0; i < m_vertices.size(); ++i)
+    {
+        size_t triStart = (i / 3) * 3;
+        if (triStart + 2 < m_vertices.size())
+        {
+            PointDouble3D v0 = m_vertices[triStart + 0];
+            PointDouble3D v1 = m_vertices[triStart + 1];
+            PointDouble3D v2 = m_vertices[triStart + 2];
+
+            double ux = v1.x - v0.x;
+            double uy = v1.y - v0.y;
+            double uz = v1.z - v0.z;
+
+            double vx = v2.x - v0.x;
+            double vy = v2.y - v0.y;
+            double vz = v2.z - v0.z;
+
+            double nx = uy * vz - uz * vy;
+            double ny = uz * vx - ux * vz;
+            double nz = ux * vy - uy * vx;
+
+            double len = std::sqrt(nx * nx + ny * ny + nz * nz);
+            if (len > 1e-12)
+            {
+                nx /= len; ny /= len; nz /= len;
+            }
+            glNormal3f(static_cast<float>(nx), static_cast<float>(ny), static_cast<float>(nz));
+        }
+        else
+        {
+            // fallback normal
+            glNormal3f(0.0f, 0.0f, 1.0f);
+        }
+    }
 }
 
 void RenderObject::cleanupVBO()
