@@ -15,6 +15,7 @@ public:
     virtual ~RenderObject();
 
     virtual void Render();
+    virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
 
     void addChild(const std::shared_ptr<RenderObject> child) { m_children.push_back(child); }
     void removeChild(const size_t i)
@@ -35,12 +36,7 @@ public:
         m_color = color;
     }
 
-    void setPosition(const PointDouble3D& position)
-    {
-        m_position = position;
-    }
-
-    virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
+    void setPosition(const PointDouble3D& position);
 
     void createDefaultNormal();
 
@@ -62,8 +58,11 @@ protected:
     GLuint m_vboNormals = 0;
     GLuint m_vboColors = 0;
     size_t m_vboCount = 0;
-    bool m_vboInitialized = false;
+    bool m_useClientArray = false;
     bool m_useVBO = true; // can be toggled for systems without VBO support
 
+    void RenderWithImmediate();
+    void RenderWithClientArray();
+    void RenderWithVBO();
     void cleanupVBO();
 };
