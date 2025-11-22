@@ -5,6 +5,9 @@
 #include <wx/glcanvas.h>
 //#include <wx/glutils.h>
 #include <vector>
+#include <memory>
+
+class RenderObject;
 
 // Structure to represent a drawing stroke
 struct DrawingStroke
@@ -32,6 +35,8 @@ public:
     // Getters
     wxColour GetDrawingColor() const { return m_currentColor; }
     int GetPenWidth() const { return m_currentWidth; }
+    
+    void setLight();
 
 private:
     // OpenGL context
@@ -54,6 +59,8 @@ private:
     std::vector<DrawingStroke> m_strokes;
     DrawingStroke m_currentStroke;
 
+    std::unique_ptr<RenderObject> m_renderObject;
+
     // OpenGL state
     bool m_needsRedraw;
     int m_width, m_height;
@@ -64,6 +71,8 @@ private:
     void SetupViewport();
     void DrawStroke(const DrawingStroke& stroke);
     void RedrawAll();
+
+    void buildScene();
 
     DECLARE_EVENT_TABLE()
 };

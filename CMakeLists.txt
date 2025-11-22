@@ -107,19 +107,13 @@ else()
     endif()
 endif()
 
-# Add executable (WIN32 flag only on Windows)
 if(WIN32)
-    add_executable(wxWidgetDemo WIN32
-        src/main.cpp
-        src/MainFrame.cpp
-        src/MainFrame.h
-        src/CustomDialog.cpp
-        src/CustomDialog.h
-        src/DrawingPanel.cpp
-        src/DrawingPanel.h
-    )
+    set(WIN32_FLAG WIN32)
 else()
-    add_executable(wxWidgetDemo
+    set(WIN32_FLAG "")
+endif()
+
+add_executable(wxWidgetDemo ${WIN32_FLAG}
         src/main.cpp
         src/MainFrame.cpp
         src/MainFrame.h
@@ -127,8 +121,12 @@ else()
         src/CustomDialog.h
         src/DrawingPanel.cpp
         src/DrawingPanel.h
-    )
-endif()
+        src/render/Point3D.h
+        src/render/Point3D.cpp
+        src/render/RenderObject.cpp
+        src/render/Sphere.cpp
+        src/render/RenderObject.h
+)
 
 # Platform-specific linking
 if(WIN32)
