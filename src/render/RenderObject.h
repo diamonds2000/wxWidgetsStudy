@@ -34,6 +34,12 @@ public:
     void setColors(const PointDouble3D& color)
     {
         m_color = color;
+        m_colors.clear();
+        m_colors.reserve(m_vertices.size());
+        for (size_t i = 0; i < m_vertices.size(); ++i)
+        {
+            m_colors.push_back(color);
+        }
     }
 
     void setPosition(const PointDouble3D& position);
@@ -54,13 +60,23 @@ protected:
     std::vector<std::shared_ptr<RenderObject>> m_children;
 
     // VBO support
-    GLuint m_vbo = 0;
     size_t m_vboCount = 0;
     bool m_useClientArray = false;
     bool m_useVBO = true; // can be toggled for systems without VBO support
 
+    GLuint m_vao = 0;
+    GLuint m_vbo = 0; // interleaved VBO (pos,norm,color)
+
+    GLuint createVBO(
+        const std::vector<PointDouble3D>& vertices,
+        const std::vector<PointDouble3D>& normals,
+        const std::vector<PointDouble3D>& colors);
+
+    GLuint createVAO(const GLuint vbo);
+
     void RenderWithImmediate();
     void RenderWithClientArray();
     void RenderWithVBO();
+    void RenderWithVAO();
     void cleanupVBO();
 };

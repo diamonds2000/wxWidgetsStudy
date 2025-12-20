@@ -10,6 +10,7 @@ public:
     // stacks: subdivisions from top to bottom (like latitude)
     Sphere(const std::string& name, double radius, int slices, int stacks);
     virtual ~Sphere();
+    //virtual void Render() override;
 
 private:
     // Rebuild mesh with new parameters
@@ -21,4 +22,7 @@ protected:
     double m_radius;
     int m_slices;
     int m_stacks;
+    // GL resources for modern rendering
+    GLuint m_vao = 0;
+    GLuint m_vbo = 0; // interleaved VBO (pos,norm,color)
 };

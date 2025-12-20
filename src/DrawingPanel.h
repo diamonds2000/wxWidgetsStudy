@@ -8,19 +8,8 @@
 #include <vector>
 #include <memory>
 
-class RenderObject;
 
-// Structure to represent a drawing stroke
-struct DrawingStroke
-{
-    std::vector<wxPoint> points;
-    wxColour color;
-    int width;
-
-    DrawingStroke(const wxColour& col = *wxBLACK, int w = 2)
-        : color(col), width(w) {
-    }
-};
+class SceneGraph;
 
 class DrawingPanel : public wxGLCanvas
 {
@@ -30,14 +19,7 @@ public:
 
     // Drawing controls
     void SetDrawingColor(const wxColour& color);
-    void SetPenWidth(int width) { m_currentWidth = width; }
     void ClearDrawing();
-
-    // Getters
-    wxColour GetDrawingColor() const { return m_currentColor; }
-    int GetPenWidth() const { return m_currentWidth; }
-
-    void setLight();
 
 private:
     // OpenGL context
@@ -52,15 +34,7 @@ private:
 
     // Drawing state
     bool m_isDrawing;
-    wxPoint m_lastPoint;
-    wxColour m_currentColor;
-    int m_currentWidth;
-
-    // Drawing data
-    std::vector<DrawingStroke> m_strokes;
-    DrawingStroke m_currentStroke;
-
-    std::unique_ptr<RenderObject> m_renderObject;
+    std::unique_ptr<SceneGraph> m_sceneGraph;
 
     // OpenGL state
     bool m_needsRedraw;
@@ -68,12 +42,8 @@ private:
 
     // OpenGL initialization and rendering
     void InitializeOpenGL();
-    void Render();
     void SetupViewport();
-    void DrawStroke(const DrawingStroke& stroke);
     void RedrawAll();
-
-    void buildScene();
 
     DECLARE_EVENT_TABLE()
 };

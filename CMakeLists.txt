@@ -11,6 +11,10 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug)
 endif()
 
+if(NOT WIN32)
+    set(OpenGL_GL_PREFERENCE GLVND)
+endif()
+
 find_package(OpenGL REQUIRED)
 if(NOT OPENGL_FOUND)
     message(FATAL_ERROR "OpenGL is not found")
@@ -128,10 +132,13 @@ add_executable(wxWidgetDemo ${WIN32_FLAG}
         src/CustomDialog.h
         src/DrawingPanel.cpp
         src/DrawingPanel.h
+        src/render/SceneGraph.cpp
+        src/render/SceneGraph.h
         src/render/Point3D.h
         src/render/RenderObject.cpp
         src/render/Sphere.cpp
         src/render/RenderObject.h
+        src/gl/Shader.cpp
 )
 
 # Platform-specific linking

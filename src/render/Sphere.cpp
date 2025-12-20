@@ -1,5 +1,22 @@
 #include "Sphere.h"
 #include <cmath>
+#include <GL/glew.h>
+#include "../gl/Shader.h"
+#include <vector>
+
+static void multiply4(const GLfloat a[16], const GLfloat b[16], GLfloat out[16])
+{
+    // out = a * b (column-major)
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            float sum = 0.0f;
+            for (int k = 0; k < 4; ++k) {
+                sum += a[k*4 + row] * b[col*4 + k];
+            }
+            out[col*4 + row] = sum;
+        }
+    }
+}
 
 static const double PI = 3.14159265358979323846;
 
@@ -14,7 +31,52 @@ Sphere::Sphere(const std::string& name, double radius, int slices, int stacks)
 
 Sphere::~Sphere()
 {
+    // cleanup GL resources if any
+    //if (m_vbo) { glDeleteBuffers(1, &m_vbo); m_vbo = 0; }
+    //if (m_vao) { glDeleteVertexArrays(1, &m_vao); m_vao = 0; }
 }
+
+// void Sphere::Render()
+// {
+//     GLuint prog = glshader::GetSimpleProgram();
+//     if (!prog)
+//     {
+//         // fallback to base Render (immediate/client arrays)
+//         RenderObject::Render();
+//         return;
+//     }
+
+//     // compute current MVP from fixed-function matrices so the shader matches existing transforms
+//     GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
+//     glGetFloatv(GL_PROJECTION_MATRIX, proj);
+//     glGetFloatv(GL_MODELVIEW_MATRIX, model);
+//     model[12] = (GLfloat)m_position.x;
+//     model[13] = (GLfloat)m_position.y;
+//     model[14] = (GLfloat)m_position.z;
+//     multiply4(proj, model, mvp);
+
+//     glUseProgram(prog);
+//     GLint loc = glGetUniformLocation(prog, "uMVP");
+//     if (loc >= 0) glUniformMatrix4fv(loc, 1, GL_FALSE, mvp);
+
+//     if (m_vao)
+//     {
+//         glBindVertexArray(m_vao);
+//         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
+//         glBindVertexArray(0);
+//     }
+//     else
+//     {
+//         // fallback
+//         RenderObject::Render();
+//     }
+
+//     glUseProgram(0);
+
+//     // render children
+//     for (const auto& child : m_children)
+//         if (child) child->Render();
+// }
 
 void Sphere::Build(double radius, int slices, int stacks)
 {
@@ -105,6 +167,62 @@ void Sphere::Build(double radius, int slices, int stacks)
     // Replace buffers with triangle lists
     m_vertices.swap(triVerts);
     m_normals.swap(triNormals);
+
+    // generate a simple per-vertex color if none provided: top red -> bottom blue
+    // m_colors.clear();
+    // m_colors.reserve(m_vertices.size());
+    // for (const auto &vv : m_vertices)
+    // {
+    //     // double t = 0.5 * (vv.y / radius + 1.0);
+    //     // if (t < 0.0) t = 0.0; 
+    //     // if (t > 1.0) t = 1.0;
+    //     // m_colors.emplace_back(t, 0.0, 1.0 - t);
+    //     m_colors.emplace_back(0.8, 0.2, 0.2);
+    // }
+
+    // // Build interleaved buffer: pos(3), normal(3), color(3)
+    // std::vector<float> interleaved;
+    // interleaved.reserve(m_vertices.size() * 9);
+    // for (size_t i = 0; i < m_vertices.size(); ++i)
+    // {
+    //     const auto &p = m_vertices[i];
+    //     const auto &n = m_normals[i];
+    //     const auto &c = m_colors[i];
+    //     interleaved.push_back((float)p.x);
+    //     interleaved.push_back((float)p.y);
+    //     interleaved.push_back((float)p.z);
+    //     interleaved.push_back((float)n.x);
+    //     interleaved.push_back((float)n.y);
+    //     interleaved.push_back((float)n.z);
+    //     interleaved.push_back((float)c.x);
+    //     interleaved.push_back((float)c.y);
+    //     interleaved.push_back((float)c.z);
+    // }
+
+    // // Create VAO/VBO (requires GL context/current)
+    // if (m_vao) { glDeleteVertexArrays(1, &m_vao); m_vao = 0; }
+    // if (m_vbo) { glDeleteBuffers(1, &m_vbo); m_vbo = 0; }
+
+    // glGenVertexArrays(1, &m_vao);
+    // glBindVertexArray(m_vao);
+
+    // glGenBuffers(1, &m_vbo);
+    // glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    // glBufferData(GL_ARRAY_BUFFER, interleaved.size() * sizeof(float), interleaved.data(), GL_STATIC_DRAW);
+
+    // GLsizei stride = 9 * sizeof(float);
+    // // position at location 0
+    // glEnableVertexAttribArray(0);
+    // glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)(0));
+    // // normal at location 1
+    // glEnableVertexAttribArray(1);
+    // glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, stride, (void*)(3 * sizeof(float)));
+    // // color at location 2
+    // glEnableVertexAttribArray(2);
+    // glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, (void*)(6 * sizeof(float)));
+
+    // glBindVertexArray(0);
+    // glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 bool Sphere::getVolume(PointDouble3D& min, PointDouble3D& max) const
