@@ -3,13 +3,21 @@
 #include <GL/glew.h>
 #include <string>
 
-namespace glshader {
+class Shader
+{
+public:
+    static Shader* GetDefaultShader();
 
-// Compile and link a minimal example shader program and return program id.
-// Returns 0 on failure.
-GLuint CreateSimpleProgram();
+    Shader(const std::string& vertexSrc, const std::string& fragmentSrc);
+    ~Shader();
 
-// Return a cached simple program instance, creating it on first call.
-GLuint GetSimpleProgram();
+    void setCurrent();
 
-} // namespace glshader
+    void setUniformVec3f(const char* name, GLfloat vec[3]);
+
+    void DebugPrintUniforms();
+
+private:
+    GLuint m_program;
+};
+

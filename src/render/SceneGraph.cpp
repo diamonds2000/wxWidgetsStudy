@@ -1,16 +1,26 @@
 #include "SceneGraph.h"
 #include "RenderObject.h"
 #include "Sphere.h"
-#include<algorithm> 
+#include "../gl/Shader.h"
+#include <cassert>
+#include <algorithm> 
 
+
+const RenderMethod RENDER_METHOD = RENDER_VAO;
 
 SceneGraph::SceneGraph()
-    : m_width(800), m_height(600)
+    : m_width(0), m_height(0)
 {
 }
 
 SceneGraph::~SceneGraph()
 {
+}
+
+void SceneGraph::init()
+{
+    setup();
+    setLight();
 }
 
 void SceneGraph::setupViewport(int width, int height)
@@ -21,19 +31,32 @@ void SceneGraph::setupViewport(int width, int height)
 
 void SceneGraph::setLight()
 {
-    GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-    GLfloat lightDiffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-    GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    GLfloat lightPos[] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 500.0f, 1.0f }; // positional
+    GLfloat lightPos[] = { 5000.0f, -5000.0f, 5000.0f, 1.0f }; // positional
 
-    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    if (RENDER_METHOD == RENDER_VAO)
+    {
+        GLfloat lightColor[] = { 1.0f, 1.0f, 0.2f};
+
+        Shader::GetDefaultShader()->setUniformVec3f("lightColor", lightColor);
+        Shader::GetDefaultShader()->setUniformVec3f("lightPos", lightPos);
+    }
+    else
+    {
+        GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+        GLfloat lightDiffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+        GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    }
 }
 
 void SceneGraph::setup()
 {
+    Shader::GetDefaultShader()->setCurrent();
+
     glEnable(GL_LINE_SMOOTH);              // Anti-aliased lines
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
 
@@ -53,11 +76,8 @@ void SceneGraph::setup()
     glEnable(GL_NORMALIZE); // normalize normals after transforms
 }
 
-void SceneGraph::Render()
+void SceneGraph::render()
 {
-    setup();
-    setLight();
-
     // Clear color and depth buffers for 3D rendering
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glClearColor(0.8f, 0.8f, 0.8f, 1.0f); // light grey background
@@ -112,6 +132,6 @@ void SceneGraph::buildScene()
 
     std::shared_ptr<Sphere> mySphere = std::make_shared<Sphere>("unit_sphere", 100.0 /* radius */, 32 /* slices */, 16 /* stacks */);
     mySphere->setColors({ PointDouble3D(0.8, 0.2, 0.2) }); // Reddish color
-    mySphere->setPosition(PointDouble3D(200.0, 100.0, 0.0));
+    mySphere->setPosition(PointDouble3D(100.0, 100.0, 0.0));
     m_rootObject->addChild(mySphere);
 }

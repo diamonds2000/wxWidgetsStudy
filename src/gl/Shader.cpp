@@ -1,7 +1,6 @@
 #include "Shader.h"
 #include <iostream>
 
-namespace {
 
 static const char* simple_vert = 
 R"GLSL(#version 330 core
@@ -11,20 +10,35 @@ layout(location = 2) in vec3 aColor;
 
 uniform mat4 uMVP;
 
+out vec3 vNormal;
 out vec3 vColor;
 
 void main() {
-    vColor = aColor;
+    vColor = vec3(aColor.x, aColor.y, aColor.z + 0.2); // slight modification to color
     gl_Position = uMVP * vec4(aPos, 1.0);
+    vNormal = aNormal;
 }
 )GLSL";
 
 static const char* simple_frag = 
 R"GLSL(#version 330 core
+in vec3 vNormal;
 in vec3 vColor;
+
+uniform vec3 lightColor;
+uniform vec3 lightPos;
+
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(vColor, 1.0);
+    vec3 lightDir = normalize(lightPos);
+    float diff = max(dot(normalize(vNormal), lightDir), 0.0);
+    vec3 diffuse = diff * lightColor;;
+    
+    float ambientStrength = 0.3;
+    vec3 ambient = ambientStrength * lightColor;
+    vec3 result = (diffuse + ambient) * vColor;
+
+    FragColor = vec4(result, 1.0);
 }
 )GLSL";
 
@@ -64,36 +78,77 @@ static GLuint linkProgram(GLuint v, GLuint f)
     return p;
 }
 
-} // anonymous
-
-namespace glshader {
-
-GLuint CreateSimpleProgram()
+Shader::Shader(const std::string& vertexSrc, const std::string& fragmentSrc)
 {
-    // Compile shaders
-    GLuint vs = compileShader(GL_VERTEX_SHADER, simple_vert);
-    if (!vs) return 0;
-    GLuint fs = compileShader(GL_FRAGMENT_SHADER, simple_frag);
-    if (!fs) { glDeleteShader(vs); return 0; }
+    GLuint vs = compileShader(GL_VERTEX_SHADER, vertexSrc.c_str());
+    if (!vs) 
+    {
+        m_program = 0;
+        return;
+    }
+    GLuint fs = compileShader(GL_FRAGMENT_SHADER, fragmentSrc.c_str());
+    if (!fs) 
+    {
+        glDeleteShader(vs);
+        m_program = 0;
+        return;
+    }
 
-    GLuint prog = linkProgram(vs, fs);
+    m_program = linkProgram(vs, fs);
 
     glDeleteShader(vs);
     glDeleteShader(fs);
-
-    return prog;
 }
 
-} // namespace glshader
-
-namespace glshader {
-
-GLuint GetSimpleProgram()
+void Shader::setCurrent()
 {
-    static GLuint s_prog = 0;
-    if (s_prog == 0)
-        s_prog = CreateSimpleProgram();
-    return s_prog;
+    glUseProgram(m_program);
 }
 
-} // namespace glshader
+void Shader::setUniformVec3f(const char* name, GLfloat vec[3])
+{
+    GLint loc = glGetUniformLocation(m_program, name);
+    if (loc >= 0)
+    {
+        glUniform3f(loc, vec[0], vec[1], vec[2]);
+    }
+    else
+    {
+        std::cerr << "Warning: uniform '" << name << "' not found in program " << m_program << std::endl;
+    }
+}
+
+void Shader::DebugPrintUniforms()
+{
+    if (m_program == 0) {
+        std::cerr << "DebugPrintUniforms: Invalid program (0)" << std::endl;
+        return;
+    }
+
+    GLint numUniforms = 0;
+    glGetProgramiv(m_program, GL_ACTIVE_UNIFORMS, &numUniforms);
+    std::cerr << "\n=== Shader Program " << m_program << " ===" << std::endl;
+    std::cerr << "Active Uniforms: " << numUniforms << std::endl;
+
+    for (GLint i = 0; i < numUniforms; ++i) {
+        GLchar name[256];
+        GLsizei length = 0;
+        GLint size = 0;
+        GLenum type = 0;
+
+        glGetActiveUniform(m_program, (GLuint)i, sizeof(name) - 1, &length, &size, &type, name);
+        name[length] = '\0';
+
+        GLint location = glGetUniformLocation(m_program, name);
+        std::cerr << "  [" << i << "] " << name << " (type=" << type << ", size=" << size << ", location=" << location << ")" << std::endl;
+    }
+    std::cerr << "=======================\n" << std::endl;
+}
+
+Shader* Shader::GetDefaultShader()
+{
+    static Shader* s_shader = nullptr;
+    if (s_shader == nullptr)
+        s_shader = new Shader(simple_vert, simple_frag);
+    return s_shader;
+}

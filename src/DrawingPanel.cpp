@@ -71,17 +71,18 @@ void DrawingPanel::InitializeOpenGL()
     // Create a simple shared shader program (example). This does not change
     // existing rendering paths yet — it provides a program you can use for
     // incremental migration to modern GL.
-    static GLuint s_simpleProgram = 0;
-    if (!s_simpleProgram) {
-        s_simpleProgram = glshader::CreateSimpleProgram();
-        if (s_simpleProgram) {
-            std::cerr << "Created simple shader program: " << s_simpleProgram << std::endl;
+    static Shader* s_shader = nullptr;
+    if (!s_shader) {
+        s_shader = Shader::GetDefaultShader();
+        if (s_shader) {
+            std::cerr << "Created simple shader program: " << s_shader << std::endl;
         }
     }
 
     m_sceneGraph = std::make_unique<SceneGraph>();
-    m_sceneGraph->buildScene();
+    m_sceneGraph->init();
     m_sceneGraph->setupViewport(m_width, m_height);
+    m_sceneGraph->buildScene();
 }
 
 void DrawingPanel::OnPaint(wxPaintEvent& event)
@@ -99,7 +100,7 @@ void DrawingPanel::OnPaint(wxPaintEvent& event)
         initialized = true;
     }
 
-    m_sceneGraph->Render();
+    m_sceneGraph->render();
     SwapBuffers(); // Swap front and back buffers
 }
 

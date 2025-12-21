@@ -1,18 +1,9 @@
 #include "RenderObject.h"
+#include "SceneGraph.h"
 #include <GL/glew.h>
 #include <GL/gl.h>
 #include "../gl/Shader.h"
 #include <cmath>
-
-enum RenderMethod
-{
-    RENDER_IMMEDIATE,
-    RENDER_CLIENT_ARRAY,
-    RENDER_VBO,
-    RENDER_VAO
-};
-
-const RenderMethod RENDER_METHOD = RENDER_VAO;
 
 
 static void multiply4(const GLfloat a[16], const GLfloat b[16], GLfloat out[16])
@@ -187,10 +178,10 @@ void RenderObject::Render()
     {
     case RENDER_VAO:
     {
-        GLuint prog = glshader::GetSimpleProgram();
-        glUseProgram(prog);
+        //GLuint prog = glshader::GetSimpleProgram();
+        //glUseProgram(prog);
         RenderWithVAO();
-        glUseProgram(0);
+        //glUseProgram(0);
         break;
     }
     case RENDER_VBO:

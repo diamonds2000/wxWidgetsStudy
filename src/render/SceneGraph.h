@@ -4,13 +4,25 @@
 #include <memory>
 #include "RenderObject.h"
 
+
+enum RenderMethod
+{
+    RENDER_IMMEDIATE,
+    RENDER_CLIENT_ARRAY,
+    RENDER_VBO,
+    RENDER_VAO
+};
+
+extern const RenderMethod RENDER_METHOD;
+
 class SceneGraph 
 {
 public:
     SceneGraph();
     ~SceneGraph();
 
-    void Render();
+    void init();
+    void render();
     void buildScene();
 
     void setupViewport(int width, int height);
