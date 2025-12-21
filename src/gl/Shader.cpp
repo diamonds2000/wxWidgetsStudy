@@ -8,15 +8,18 @@ layout(location = 0) in vec3 aPos;
 layout(location = 1) in vec3 aNormal;
 layout(location = 2) in vec3 aColor;
 
-uniform mat4 uMVP;
+uniform mat4 mvp;
+uniform mat4 model;
 
 out vec3 vNormal;
 out vec3 vColor;
+out vec3 vFragPos;
 
 void main() {
-    vColor = vec3(aColor.x, aColor.y, aColor.z + 0.2); // slight modification to color
-    gl_Position = uMVP * vec4(aPos, 1.0);
+    vColor = vec3(aColor.x, aColor.y, aColor.z);
+    gl_Position = mvp * vec4(aPos, 1.0);
     vNormal = aNormal;
+    vFragPos = vec3(model * vec4(aPos, 1.0));
 }
 )GLSL";
 
@@ -24,19 +27,28 @@ static const char* simple_frag =
 R"GLSL(#version 330 core
 in vec3 vNormal;
 in vec3 vColor;
+in vec3 vFragPos;
 
+uniform vec3 viewPos;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 
 out vec4 FragColor;
 void main() {
-    vec3 lightDir = normalize(lightPos);
+    vec3 lightDir = normalize(lightPos - vFragPos);
     float diff = max(dot(normalize(vNormal), lightDir), 0.0);
-    vec3 diffuse = diff * lightColor;;
+    vec3 diffuse = diff * lightColor;
     
     float ambientStrength = 0.3;
     vec3 ambient = ambientStrength * lightColor;
-    vec3 result = (diffuse + ambient) * vColor;
+
+    float specularStrength = 0.5;
+    vec3 viewDir = normalize(viewPos - vFragPos);
+    vec3 reflectDir = reflect(-lightDir, normalize(vNormal));
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32);
+    vec3 specular = specularStrength * spec * lightColor;
+
+    vec3 result = (diffuse + ambient + specular) * vColor;
 
     FragColor = vec4(result, 1.0);
 }
@@ -111,6 +123,19 @@ void Shader::setUniformVec3f(const char* name, GLfloat vec[3])
     if (loc >= 0)
     {
         glUniform3f(loc, vec[0], vec[1], vec[2]);
+    }
+    else
+    {
+        std::cerr << "Warning: uniform '" << name << "' not found in program " << m_program << std::endl;
+    }
+}
+
+void Shader::setUniformMat4f(const char* name, GLfloat mat[16])
+{
+    GLint loc = glGetUniformLocation(m_program, name);
+    if (loc >= 0)
+    {
+        glUniformMatrix4fv(loc, 1, GL_FALSE, mat);
     }
     else
     {

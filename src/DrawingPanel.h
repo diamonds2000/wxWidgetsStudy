@@ -31,6 +31,7 @@ private:
     void OnMouseMove(wxMouseEvent& event);
     void OnMouseUp(wxMouseEvent& event);
     void OnSize(wxSizeEvent& event);
+    void OnTimer(wxTimerEvent& event);
 
     // Drawing state
     bool m_isDrawing;
@@ -39,6 +40,8 @@ private:
     // OpenGL state
     bool m_needsRedraw;
     int m_width, m_height;
+
+    wxTimer* m_Timer;
 
     // OpenGL initialization and rendering
     void InitializeOpenGL();

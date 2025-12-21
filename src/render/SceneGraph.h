@@ -26,10 +26,11 @@ public:
     void buildScene();
 
     void setupViewport(int width, int height);
+    void setLight(const float pos[3]);
 
 private:
     void setup();
-    void setLight();
+    void setupCamera();
 
     std::unique_ptr<RenderObject> m_rootObject;
     int m_width;

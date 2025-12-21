@@ -173,15 +173,16 @@ void RenderObject::Render()
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_NORMALIZE);
 
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glTranslatef((GLfloat)m_position.x, (GLfloat)m_position.y, (GLfloat)m_position.z);
+
     // Prefer VBO rendering for speed. Initialize VBOs once when possible.
     switch (RENDER_METHOD)
     {
     case RENDER_VAO:
     {
-        //GLuint prog = glshader::GetSimpleProgram();
-        //glUseProgram(prog);
         RenderWithVAO();
-        //glUseProgram(0);
         break;
     }
     case RENDER_VBO:
@@ -204,6 +205,8 @@ void RenderObject::Render()
         }
     }
 
+    glPopMatrix();
+
     printf("RenderObject::Render()\n");
 }
 
@@ -223,15 +226,9 @@ void RenderObject::RenderWithVAO()
     GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
     glGetFloatv(GL_PROJECTION_MATRIX, proj);
     glGetFloatv(GL_MODELVIEW_MATRIX, model);
-    model[12] = (GLfloat)m_position.x;
-    model[13] = (GLfloat)m_position.y;
-    model[14] = (GLfloat)m_position.z;
     multiply4(proj, model, mvp);
-
-    GLint prog = 0;
-    glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
-    GLint loc = glGetUniformLocation(prog, "uMVP");
-    if (loc >= 0) glUniformMatrix4fv(loc, 1, GL_FALSE, mvp);
+    Shader::GetDefaultShader()->setUniformMat4f("mvp", mvp);
+    Shader::GetDefaultShader()->setUniformMat4f("model", model);
 
     if (m_vao)
     {

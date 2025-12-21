@@ -15,6 +15,8 @@ public:
 
     void setUniformVec3f(const char* name, GLfloat vec[3]);
 
+    void setUniformMat4f(const char* name, GLfloat mat[16]);
+
     void DebugPrintUniforms();
 
 private:

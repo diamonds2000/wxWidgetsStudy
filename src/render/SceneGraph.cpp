@@ -8,6 +8,7 @@
 
 const RenderMethod RENDER_METHOD = RENDER_VAO;
 
+
 SceneGraph::SceneGraph()
     : m_width(0), m_height(0)
 {
@@ -20,37 +21,9 @@ SceneGraph::~SceneGraph()
 void SceneGraph::init()
 {
     setup();
-    setLight();
-}
 
-void SceneGraph::setupViewport(int width, int height)
-{
-    m_width = width;
-    m_height = height;
-}
-
-void SceneGraph::setLight()
-{
-    GLfloat lightPos[] = { 5000.0f, -5000.0f, 5000.0f, 1.0f }; // positional
-
-    if (RENDER_METHOD == RENDER_VAO)
-    {
-        GLfloat lightColor[] = { 1.0f, 1.0f, 0.2f};
-
-        Shader::GetDefaultShader()->setUniformVec3f("lightColor", lightColor);
-        Shader::GetDefaultShader()->setUniformVec3f("lightPos", lightPos);
-    }
-    else
-    {
-        GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
-        GLfloat lightDiffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };
-        GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-        glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
-        glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-    }
+    float lightPos[3] = { 500.0f, 500.0f, 500.0f };
+    setLight(lightPos);
 }
 
 void SceneGraph::setup()
@@ -76,6 +49,55 @@ void SceneGraph::setup()
     glEnable(GL_NORMALIZE); // normalize normals after transforms
 }
 
+void SceneGraph::setupViewport(int width, int height)
+{
+    m_width = width;
+    m_height = height;
+
+    setupCamera();
+}
+
+void SceneGraph::setLight(const float pos[3])
+{
+    GLfloat lightPos[] = { pos[0], pos[1], pos[2], 1.0f }; // positional
+
+    if (RENDER_METHOD == RENDER_VAO)
+    {
+        GLfloat lightColor[] = { 1.0f, 1.0f, 1.0f};
+
+        Shader::GetDefaultShader()->setUniformVec3f("lightColor", lightColor);
+        Shader::GetDefaultShader()->setUniformVec3f("lightPos", lightPos);
+    }
+    else
+    {
+        GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
+        GLfloat lightDiffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };
+        GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
+    }
+}
+
+void SceneGraph::setupCamera()
+{
+    GLfloat eyePos[3] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 500.0f };
+    GLfloat targetPos[3] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 0.0f };
+    GLfloat upVec[3] = { 0.0f, 1.0f, 0.0f };
+
+    // Set camera to look at center of the panel
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    // Camera positioned above the screen, looking toward the panel center
+    // gluLookAt((double)eyePos[0], (double)eyePos[1], (double)eyePos[2],
+    //           (double)targetPos[0], (double)targetPos[1], (double)targetPos[2],
+    //           (double)upVec[0], (double)upVec[1], (double)upVec[2]);
+
+    Shader::GetDefaultShader()->setUniformVec3f("viewPos", eyePos);
+}
+
 void SceneGraph::render()
 {
     // Clear color and depth buffers for 3D rendering
@@ -99,13 +121,7 @@ void SceneGraph::render()
         //gluPerspective(45.0, aspect, 1.0, 2000.0);
         glOrtho(0, m_width, m_height, 0, -volume_sphere, volume_sphere); // Y-axis inverted for screen coordinates
 
-        // Set camera to look at center of the panel
-        glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();
-        // Camera positioned above the screen, looking toward the panel center
-        // gluLookAt((double)m_width / 2.0, (double)m_height / 2.0, 500.0,
-        //           (double)m_width / 2.0, (double)m_height / 2.0, 0.0,
-        //           0.0, 1.0, 0.0);
+        //setupCamera();
 
         // Render the 3D scene
         m_rootObject->Render();

@@ -14,6 +14,7 @@ EVT_LEFT_DOWN(DrawingPanel::OnMouseDown)
 EVT_MOTION(DrawingPanel::OnMouseMove)
 EVT_LEFT_UP(DrawingPanel::OnMouseUp)
 EVT_SIZE(DrawingPanel::OnSize)
+EVT_TIMER(-1, DrawingPanel::OnTimer)
 wxEND_EVENT_TABLE()
 
 DrawingPanel::DrawingPanel(wxWindow* parent)
@@ -42,10 +43,13 @@ DrawingPanel::DrawingPanel(wxWindow* parent)
             InitializeOpenGL();
         }
     });
+
+    m_Timer = new wxTimer(this);
 }
 
 DrawingPanel::~DrawingPanel()
 {
+    delete m_Timer;
     delete m_context;
 }
 
@@ -83,6 +87,8 @@ void DrawingPanel::InitializeOpenGL()
     m_sceneGraph->init();
     m_sceneGraph->setupViewport(m_width, m_height);
     m_sceneGraph->buildScene();
+
+    m_Timer->Start(32); // Approx. 30 FPS
 }
 
 void DrawingPanel::OnPaint(wxPaintEvent& event)
@@ -139,6 +145,33 @@ void DrawingPanel::OnMouseUp(wxMouseEvent& event)
 void DrawingPanel::RedrawAll()
 {
     m_needsRedraw = true;
+    Refresh();
+}
+
+void DrawingPanel::OnTimer(wxTimerEvent& event)
+{
+    static float angle = 0.0f;
+    angle += 1.0f;
+    if (angle >= 360.0f) angle -= 360.0f;
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+    glRotatef(angle, 0.0f, 1.0f, 0.0f); // Rotate scene for demonstration
+    
+    GLfloat model[16];
+    glGetFloatv(GL_MODELVIEW_MATRIX, model);
+    glPopMatrix();
+
+    float lightPos[3] = { 500.0f, 500.0f, 500.0f };
+    for (int i = 0; i < 3; ++i)
+        lightPos[i] = model[i * 4 + 0] * lightPos[0] +
+                      model[i * 4 + 1] * lightPos[1] +
+                      model[i * 4 + 2] * lightPos[2] +
+                      model[i * 4 + 3] * 1.0f;
+    
+    m_sceneGraph->setLight(lightPos);
+
     Refresh();
 }
 
