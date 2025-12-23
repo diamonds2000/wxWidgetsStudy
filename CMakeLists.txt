@@ -25,6 +25,11 @@ if(NOT GLEW_FOUND)
     message(FATAL_ERROR "GLEW is not found")
 endif()
 
+find_package(glm REQUIRED)
+if(NOT glm_FOUND)
+    message(FATAL_ERROR "GLM is not found")
+endif()
+
 # compiler flag configuration
 if(WIN32)
 	if(MSVC_TOOLSET_VERSION EQUAL 120)
@@ -157,16 +162,17 @@ if(WIN32)
         wsock32.lib
         opengl32.lib
         glu32.lib
+        glm::glm
     )
 
 else()
     # Link libraries for Linux
     if(wxWidgets_FOUND)
         # Use standard wxWidgets linking
-        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} glm::glm)
     else()
         # Use pkg-config libraries
-        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES})
+        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} glm::glm)
     endif()
 endif()
 

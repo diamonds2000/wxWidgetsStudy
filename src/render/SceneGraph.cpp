@@ -3,7 +3,10 @@
 #include "Sphere.h"
 #include "../gl/Shader.h"
 #include <cassert>
+#include <cstring>
 #include <algorithm> 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 
 const RenderMethod RENDER_METHOD = RENDER_VAO;
@@ -42,14 +45,6 @@ void SceneGraph::setup()
     // Ensure polygons are filled (not wireframe) and disable face culling by default
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_CULL_FACE);
-
-    // Enable basic lighting
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glShadeModel(GL_SMOOTH);
-    glEnable(GL_NORMALIZE); // normalize normals after transforms
 }
 
 void SceneGraph::setupViewport(int width, int height)
@@ -73,6 +68,14 @@ void SceneGraph::setLight(const float pos[3])
     }
     else
     {
+        // Enable basic lighting
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+        glEnable(GL_COLOR_MATERIAL);
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+        glShadeModel(GL_SMOOTH);
+        glEnable(GL_NORMALIZE); // normalize normals after transforms
+
         GLfloat lightAmbient[] = { 0.2f, 0.2f, 0.2f, 1.0f };
         GLfloat lightDiffuse[] = { 0.8f, 0.8f, 0.8f, 1.0f };
         GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -122,10 +125,15 @@ void SceneGraph::render()
 
         // Set perspective projection
         glMatrixMode(GL_PROJECTION);
-        glLoadIdentity();
+        //glLoadIdentity();
         //double aspect = m_width > 0 && m_height > 0 ? (double)m_width / (double)m_height : 1.0;
         //gluPerspective(45.0, aspect, 1.0, 2000.0);
-        glOrtho(0, m_width, m_height, 0, -volume_sphere, volume_sphere); // Y-axis inverted for screen coordinates
+        //glOrtho(0, m_width, m_height, 0, -volume_sphere, volume_sphere); // Y-axis inverted for screen coordinates
+
+        glm::mat4 projection = glm::ortho(0.0f, (float)m_width, (float)m_height, 0.0f, -(float)volume_sphere, (float)volume_sphere);
+        GLfloat proj[16];
+        memcpy(proj, &projection, sizeof(GLfloat) * 16);
+        glLoadMatrixf(proj);
 
         //setupCamera();
 
