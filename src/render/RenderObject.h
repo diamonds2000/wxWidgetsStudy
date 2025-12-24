@@ -17,6 +17,8 @@ public:
     virtual void Render();
     virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
 
+    virtual void buildGraphicsResources(); // e.g., VBOs, VAOs
+
     void addChild(const std::shared_ptr<RenderObject> child) { m_children.push_back(child); }
     void removeChild(const size_t i)
     {
@@ -66,6 +68,12 @@ protected:
 
     GLuint m_vao = 0;
     GLuint m_vbo = 0; // interleaved VBO (pos,norm,color)
+    GLuint m_dispList = 0;
+
+    GLuint createDispList(
+        const std::vector<PointDouble3D>& vertices,
+        const std::vector<PointDouble3D>& normals,
+        const std::vector<PointDouble3D>& colors);
 
     GLuint createVBO(
         const std::vector<PointDouble3D>& vertices,
@@ -75,8 +83,7 @@ protected:
     GLuint createVAO(const GLuint vbo);
 
     void RenderWithImmediate();
-    void RenderWithClientArray();
     void RenderWithVBO();
     void RenderWithVAO();
-    void cleanupVBO();
+    void cleanRenderResources();
 };

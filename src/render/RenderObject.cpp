@@ -30,7 +30,7 @@ RenderObject::RenderObject(const std::string& name)
 RenderObject::~RenderObject()
 {
     // Cleanup any GL resources
-    cleanupVBO();
+    cleanRenderResources();
 }
 
 void RenderObject::setPosition(const PointDouble3D& position)
@@ -110,6 +110,67 @@ bool RenderObject::getVolume(PointDouble3D& min, PointDouble3D& max) const
     return true;
 }
 
+void RenderObject::buildGraphicsResources()
+{
+    bool hasNormals = (m_normals.size() == m_vertices.size());
+    bool hasPerVertexColors = (m_colors.size() == m_vertices.size());
+
+    if (!hasNormals)
+    {
+        createDefaultNormal();
+    }
+
+    if (!hasPerVertexColors)
+    {
+        m_colors.assign(m_vertices.size(), m_color);
+    }
+
+    if (m_vertices.empty() || m_normals.size() != m_vertices.size())
+        return;
+
+    if (RENDER_METHOD == RENDER_VAO)
+    {
+        if (m_vbo == 0)
+        {
+            m_vbo = createVBO(m_vertices, m_normals, m_colors);
+        }
+
+        if (m_vao == 0)
+        {
+            m_vao = createVAO(m_vbo);
+        }
+    }
+    else if (RENDER_METHOD == RENDER_VBO)
+    {
+        if (m_vbo == 0)
+        {
+            m_vbo = createVBO(m_vertices, m_normals, m_colors);
+        }
+    }
+    else
+    {
+        if (m_dispList == 0)
+        {
+            m_dispList = createDispList(m_vertices, m_normals, m_colors);
+        }
+    }
+    
+    for (const std::shared_ptr<RenderObject>& child : m_children)
+    {
+        if (child)
+        {
+            child->buildGraphicsResources();
+        }
+    }
+}
+
+void RenderObject::cleanRenderResources()
+{
+    if (m_vao) { glDeleteVertexArrays(1, &m_vao); m_vao = 0; }
+    if (m_vbo) { glDeleteBuffers(1, &m_vbo); m_vbo = 0; }
+    if (m_dispList) { glDeleteLists(m_dispList, 1); m_dispList = 0; }
+}
+
 void RenderObject::createDefaultNormal()
 {
     m_normals.clear();
@@ -159,16 +220,8 @@ void RenderObject::createDefaultNormal()
     }
 }
 
-void RenderObject::cleanupVBO()
-{
-    if (m_vao) { glDeleteVertexArrays(1, &m_vao); m_vao = 0; }
-    if (m_vbo) { glDeleteBuffers(1, &m_vbo); m_vbo = 0; }
-}
-
 void RenderObject::Render()
 {
-    // Enable smooth shading and color material so vertex colors interpolate across triangles
-    glShadeModel(GL_SMOOTH);
     glEnable(GL_COLOR_MATERIAL);
     glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
     glEnable(GL_NORMALIZE);
@@ -182,17 +235,17 @@ void RenderObject::Render()
     {
     case RENDER_VAO:
     {
+        printf("RenderObject::Render(%s) with VAO\n", m_name.c_str());
         RenderWithVAO();
         break;
     }
     case RENDER_VBO:
+        printf("RenderObject::Render(%s) with VBO\n", m_name.c_str());
         RenderWithVBO();
-        break;
-    case RENDER_CLIENT_ARRAY:
-        RenderWithClientArray();
         break;
     case RENDER_IMMEDIATE:
     default:
+        printf("RenderObject::Render(%s) with Immediate Mode\n", m_name.c_str());
         RenderWithImmediate();
         break;
     }
@@ -206,22 +259,12 @@ void RenderObject::Render()
     }
 
     glPopMatrix();
-
-    printf("RenderObject::Render()\n");
 }
 
 void RenderObject::RenderWithVAO()
 {
     if (m_vao == 0)
-    {
-        if (m_colors.size() != m_vertices.size())
-        {
-            m_colors.assign(m_vertices.size(), m_color);
-        }
-
-        m_vbo = createVBO(m_vertices, m_normals, m_colors);
-        m_vao = createVAO(m_vbo);
-    }
+        return;
 
     GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
     glGetFloatv(GL_PROJECTION_MATRIX, proj);
@@ -230,20 +273,15 @@ void RenderObject::RenderWithVAO()
     Shader::GetDefaultShader()->setUniformMat4f("mvp", mvp);
     Shader::GetDefaultShader()->setUniformMat4f("model", model);
 
-    if (m_vao)
-    {
-        glBindVertexArray(m_vao);
-        glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
-        glBindVertexArray(0);
-    }
+    glBindVertexArray(m_vao);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
+    glBindVertexArray(0);
 }
 
 void RenderObject::RenderWithVBO()
 {
     if (m_vbo == 0)
-    {
-        m_vbo = createVBO(m_vertices, m_normals, m_colors);
-    }
+        return;
 
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
     GLsizei stride = 9 * sizeof(float);
@@ -256,7 +294,7 @@ void RenderObject::RenderWithVBO()
     glEnableClientState(GL_COLOR_ARRAY);
     glColorPointer(3, GL_FLOAT, stride, reinterpret_cast<void*>(6 * sizeof(float)));
 
-    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)1);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
 
     glDisableClientState(GL_COLOR_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
@@ -264,111 +302,9 @@ void RenderObject::RenderWithVBO()
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
-void RenderObject::RenderWithClientArray()
-{
-    bool hasNormals = (m_normals.size() == m_vertices.size());
-    bool hasPerVertexColors = (m_colors.size() == m_vertices.size());
-
-    std::vector<float> vertBuf;
-    vertBuf.reserve(m_vertices.size() * 3);
-    for (const auto &v : m_vertices)
-    {
-        vertBuf.push_back((float)v.x);
-        vertBuf.push_back((float)v.y);
-        vertBuf.push_back((float)v.z);
-    }
-
-    std::vector<float> normalBuf;
-    if (hasNormals)
-    {
-        normalBuf.reserve(m_normals.size() * 3);
-        for (const auto &n : m_normals)
-        {
-            normalBuf.push_back((float)n.x);
-            normalBuf.push_back((float)n.y);
-            normalBuf.push_back((float)n.z);
-        }
-    }
-
-    std::vector<float> colorBuf;
-    if (hasPerVertexColors)
-    {
-        colorBuf.reserve(m_colors.size() * 3);
-        for (const auto &c : m_colors)
-        {
-            colorBuf.push_back((float)c.x);
-            colorBuf.push_back((float)c.y);
-            colorBuf.push_back((float)c.z);
-        }
-    }
-    else
-    {
-        colorBuf.reserve(m_vertices.size() * 3);
-        for (size_t i = 0; i < m_vertices.size(); ++i)
-        {
-            colorBuf.push_back((float)m_color.x);
-            colorBuf.push_back((float)m_color.y);
-            colorBuf.push_back((float)m_color.z);
-        }
-    }
-
-    if (hasNormals)
-    {
-        glEnableClientState(GL_NORMAL_ARRAY);
-        glNormalPointer(GL_FLOAT, 0, normalBuf.data());
-    }
-
-    glEnableClientState(GL_COLOR_ARRAY);
-    glColorPointer(3, GL_FLOAT, 0, colorBuf.data());
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 0, vertBuf.data());
-
-    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
-    if (hasNormals) glDisableClientState(GL_NORMAL_ARRAY);
-}
-
 void RenderObject::RenderWithImmediate()
 {
-    bool hasNormals = (m_normals.size() == m_vertices.size());
-    bool hasPerVertexColors = (m_colors.size() == m_vertices.size());
-    
-    glBegin(GL_TRIANGLES);
-    if (hasPerVertexColors)
-    {
-        for (size_t i = 0; i < m_vertices.size(); ++i)
-        {
-            if (hasNormals)
-            {
-                PointFloat3D normal(m_normals[i]);
-                glNormal3f(normal.x, normal.y, normal.z);
-            }
-
-            PointFloat3D color(m_colors[i]);
-            glColor3f(color.x, color.y, color.z);
-            PointFloat3D vertex(m_vertices[i]);
-            glVertex3f(vertex.x, vertex.y, vertex.z);
-        }
-    }
-    else
-    {
-        PointFloat3D useColor(m_color);
-        glColor3f(useColor.x, useColor.y, useColor.z);
-        for (size_t i = 0; i < m_vertices.size(); ++i)
-        {
-            if (hasNormals)
-            {
-                PointFloat3D normal(m_normals[i]);
-                glNormal3f(normal.x, normal.y, normal.z);
-            }
-            PointFloat3D vertex(m_vertices[i]);
-            glVertex3f(vertex.x, vertex.y, vertex.z);
-        }
-    }
-    glEnd();
+    glCallList(m_dispList);
 }
 
 GLuint RenderObject::createVBO(
@@ -376,14 +312,6 @@ GLuint RenderObject::createVBO(
     const std::vector<PointDouble3D>& normals, 
     const std::vector<PointDouble3D>& colors)
 {
-    bool hasNormals = (normals.size() == vertices.size());
-    //bool hasPerVertexColors = (colors.size() == vertices.size());
-
-    if (!hasNormals)
-    {
-        createDefaultNormal();
-    }
-
     size_t vertexCount = vertices.size();
 
     size_t bufferCount = vertexCount * 3 * 3;  //interleaved buffer
@@ -448,3 +376,54 @@ GLuint RenderObject::createVAO(const GLuint vbo)
     return vao;
 }
 
+GLuint RenderObject::createDispList(
+    const std::vector<PointDouble3D>& vertices,
+    const std::vector<PointDouble3D>& normals,
+    const std::vector<PointDouble3D>& colors)
+{
+    bool hasNormals = (normals.size() == vertices.size());
+    bool hasPerVertexColors = (colors.size() == vertices.size());
+
+    GLuint dispList = glGenLists(1);
+    glNewList(dispList, GL_COMPILE);
+    {
+        glBegin(GL_TRIANGLES);
+        {
+            if (hasPerVertexColors)
+            {
+                for (size_t i = 0; i < vertices.size(); ++i)
+                {
+                    if (hasNormals)
+                    {
+                        PointFloat3D normal(normals[i]);
+                        glNormal3f(normal.x, normal.y, normal.z);
+                    }
+
+                    PointFloat3D color(colors[i]);
+                    glColor3f(color.x, color.y, color.z);
+                    PointFloat3D vertex(vertices[i]);
+                    glVertex3f(vertex.x, vertex.y, vertex.z);
+                }
+            }
+            else
+            {
+                PointFloat3D useColor(m_color);
+                glColor3f(useColor.x, useColor.y, useColor.z);
+                for (size_t i = 0; i < vertices.size(); ++i)
+                {
+                    if (hasNormals)
+                    {
+                        PointFloat3D normal(normals[i]);
+                        glNormal3f(normal.x, normal.y, normal.z);
+                    }
+                    PointFloat3D vertex(vertices[i]);
+                    glVertex3f(vertex.x, vertex.y, vertex.z);
+                }
+            }
+        }
+        glEnd();
+    }
+    glEndList();
+
+    return dispList;
+}

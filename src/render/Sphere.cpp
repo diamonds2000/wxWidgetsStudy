@@ -6,20 +6,6 @@
 #include <vector>
 
 
-static void multiply4(const GLfloat a[16], const GLfloat b[16], GLfloat out[16])
-{
-    // out = a * b (column-major)
-    for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 4; ++col) {
-            float sum = 0.0f;
-            for (int k = 0; k < 4; ++k) {
-                sum += a[k*4 + row] * b[col*4 + k];
-            }
-            out[col*4 + row] = sum;
-        }
-    }
-}
-
 static const double PI = 3.14159265358979323846;
 
 Sphere::Sphere(const std::string& name, double radius, int slices, int stacks)
@@ -33,52 +19,7 @@ Sphere::Sphere(const std::string& name, double radius, int slices, int stacks)
 
 Sphere::~Sphere()
 {
-    // cleanup GL resources if any
-    //if (m_vbo) { glDeleteBuffers(1, &m_vbo); m_vbo = 0; }
-    //if (m_vao) { glDeleteVertexArrays(1, &m_vao); m_vao = 0; }
 }
-
-// void Sphere::Render()
-// {
-//     GLuint prog = glshader::GetSimpleProgram();
-//     if (!prog)
-//     {
-//         // fallback to base Render (immediate/client arrays)
-//         RenderObject::Render();
-//         return;
-//     }
-
-//     // compute current MVP from fixed-function matrices so the shader matches existing transforms
-//     GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
-//     glGetFloatv(GL_PROJECTION_MATRIX, proj);
-//     glGetFloatv(GL_MODELVIEW_MATRIX, model);
-//     model[12] = (GLfloat)m_position.x;
-//     model[13] = (GLfloat)m_position.y;
-//     model[14] = (GLfloat)m_position.z;
-//     multiply4(proj, model, mvp);
-
-//     glUseProgram(prog);
-//     GLint loc = glGetUniformLocation(prog, "uMVP");
-//     if (loc >= 0) glUniformMatrix4fv(loc, 1, GL_FALSE, mvp);
-
-//     if (m_vao)
-//     {
-//         glBindVertexArray(m_vao);
-//         glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());
-//         glBindVertexArray(0);
-//     }
-//     else
-//     {
-//         // fallback
-//         RenderObject::Render();
-//     }
-
-//     glUseProgram(0);
-
-//     // render children
-//     for (const auto& child : m_children)
-//         if (child) child->Render();
-// }
 
 void Sphere::Build(double radius, int slices, int stacks)
 {

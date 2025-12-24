@@ -90,8 +90,8 @@ void SceneGraph::setLight(const float pos[3])
 void SceneGraph::setupCamera()
 {
     GLfloat eyePos[3] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 500.0f };
-    GLfloat targetPos[3] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 0.0f };
-    GLfloat upVec[3] = { 0.0f, 1.0f, 0.0f };
+    //GLfloat targetPos[3] = { (GLfloat)m_width / 2.0f, (GLfloat)m_height / 2.0f, 0.0f };
+    //GLfloat upVec[3] = { 0.0f, 1.0f, 0.0f };
 
     // Set camera to look at center of the panel
     glMatrixMode(GL_MODELVIEW);
@@ -164,4 +164,6 @@ void SceneGraph::buildScene()
     mySphere->setColors({ PointDouble3D(0.8, 0.2, 0.2) }); // Reddish color
     mySphere->setPosition(PointDouble3D(100.0, 100.0, 0.0));
     m_rootObject->addChild(mySphere);
+
+    m_rootObject->buildGraphicsResources();
 }
