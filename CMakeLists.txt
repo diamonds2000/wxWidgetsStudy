@@ -20,78 +20,66 @@ if(NOT OPENGL_FOUND)
     message(FATAL_ERROR "OpenGL is not found")
 endif()
 
-find_package(GLEW REQUIRED)
-if(NOT GLEW_FOUND)
-    message(FATAL_ERROR "GLEW is not found")
-endif()
-
-find_package(glm REQUIRED)
-if(NOT glm_FOUND)
-    message(FATAL_ERROR "GLM is not found")
-endif()
-
-# compiler flag configuration
-if(WIN32)
-	if(MSVC_TOOLSET_VERSION EQUAL 120)
-		set(WXGIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}_x64")
-	else()
-		set(WXGIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}x_x64")
-	endif()
-
-	message(STATUS "WXGIDGETS_LIB_PREFIX = ${WXGIDGETS_LIB_PREFIX}")
-	
-	# Add preprocessor definitions for Windows
-    add_definitions(-DWXUSINGDLL -D__WXMSW__ -D__WXDEBUG__ -DwxUSE_UNICODE)
-	
-    # MSVC compiler flags for debugging
-    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
-    set(CMAKE_C_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
-    # Enable full debug info in PDB
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-    
-    # MSVC compiler flags for release
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
-    set(CMAKE_C_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
-    # Release linker flags
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
-else()
-    # GCC/Clang flags for debugging
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
-    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall")
-    
-    # GCC/Clang flags for release
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
-endif()
-
 # SDK path configuration
 if(WIN32)
-	message(STATUS "MSVC_VERSION = ${MSVC_VERSION}.")
-	message(STATUS "MSVC_TOOLSET_VERSION = ${MSVC_TOOLSET_VERSION}.")
+    # Windows - wxWidgets will be configured manually.
 	
     # Windows-specific wxWidgets configuration
     # Use environment variable WXWIDGETS or fallback to default path
     if(DEFINED ENV{WXWIDGETS})
         set(WXWIDGETS_ROOT "$ENV{WXWIDGETS}")
-        message(STATUS "Using wxWidgets from environment variable: ${WXWIDGETS_ROOT}")
+        message(STATUS "Using wxWidgets from environment variable: WXWIDGETS_ROOT")
+    endif()
+
+    if(MSVC_TOOLSET_VERSION EQUAL 120)
+        set(WXWIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}_x64")
     else()
-        set(WXWIDGETS_ROOT "D:/DevCode/wxWidgets")
-        message(WARNING "WXWIDGETS environment variable not set. Using default: ${WXWIDGETS_ROOT}")
+        set(WXWIDGETS_LIB_PREFIX "vc${MSVC_TOOLSET_VERSION}x_x64")
     endif()
     
-    set(WXWIDGETS_LIB_DIR "${WXWIDGETS_ROOT}/lib/${WXGIDGETS_LIB_PREFIX}_dll")
+    set(WXWIDGETS_LIB_DIR "${WXWIDGETS_ROOT}/lib/${WXWIDGETS_LIB_PREFIX}_dll")
     set(WXWIDGETS_INCLUDE_DIR "${WXWIDGETS_ROOT}/include")
-    set(WXWIDGETS_SETUP_DIR "${WXWIDGETS_LIB_DIR}/mswud")
-    
+    set(WXWIDGETS_VC_INCLUDE_DIR "${WXWIDGETS_ROOT}/include/msvc")
+
+    message(STATUS "WXWIDGETS_LIB_PREFIX = ${WXWIDGETS_LIB_PREFIX}")
+    message(STATUS "MSVC_VERSION = ${MSVC_VERSION}.")
+    message(STATUS "MSVC_TOOLSET_VERSION = ${MSVC_TOOLSET_VERSION}.")
+
+    if(DEFINED ENV{GLEW_ROOT})
+        set(GLEW_ROOT "$ENV{GLEW_ROOT}")
+        message(STATUS "Using glew from environment variable: GLEW_ROOT")
+    endif()
+
+    set(GLEW_INCLUDE_DIR "${GLEW_ROOT}/include")
+    set(GLEW_LIB_DIR "${GLEW_ROOT}/lib/Release/x64")
+
+    if(DEFINED ENV{GLM_ROOT})
+        set(GLM_ROOT "$ENV{GLM_ROOT}")
+        message(STATUS "Using glm from environment variable: GLM_ROOT")
+    endif()
+
+    set(GLM_INCLUDE_DIR "${GLM_ROOT}")
+
     # Add include directories for Windows
     include_directories(${WXWIDGETS_INCLUDE_DIR})
-    include_directories(${WXWIDGETS_SETUP_DIR})
+    include_directories(${WXWIDGETS_VC_INCLUDE_DIR})
+
+    include_directories(${GLEW_INCLUDE_DIR})
+    include_directories(${GLM_INCLUDE_DIR})
 else()
     # Linux/Unix - try to find wxWidgets
     # First try the standard FindwxWidgets module
     find_package(wxWidgets COMPONENTS core base gl)
+
+    find_package(GLEW REQUIRED)
+    if(NOT GLEW_FOUND)
+        message(FATAL_ERROR "GLEW is not found")
+    endif()
+
+    find_package(glm REQUIRED)
+    if(NOT glm_FOUND)
+        message(FATAL_ERROR "GLM is not found")
+    endif()
 
     include_directories(${GLEW_INCLUDE_DIRS})
     
@@ -123,10 +111,40 @@ else()
     endif()
 endif()
 
+
 if(WIN32)
     set(WIN32_FLAG WIN32)
 else()
     set(WIN32_FLAG "")
+endif()
+
+# compiler flag configuration
+if(WIN32)
+    # Add preprocessor definitions for Windows
+    add_definitions(-DwxMSVC_VERSION_AUTO)
+    add_definitions(-DWXUSINGDLL -D__WXMSW__ -D__WXDEBUG__ -DwxUSE_UNICODE -D_UNICODE)
+
+    # MSVC compiler flags for debugging
+    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
+    set(CMAKE_C_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
+    # Enable full debug info in PDB
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
+    
+    # MSVC compiler flags for release
+    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
+    set(CMAKE_C_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
+    # Release linker flags
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
+else()
+    # GCC/Clang flags for debugging
+    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
+    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall")
+    
+    # GCC/Clang flags for release
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
 endif()
 
 add_executable(wxWidgetDemo ${WIN32_FLAG}
@@ -144,16 +162,18 @@ add_executable(wxWidgetDemo ${WIN32_FLAG}
         src/render/Sphere.cpp
         src/render/RenderObject.h
         src/gl/Shader.cpp
+        src/gl/Shader.h
 )
 
 # Platform-specific linking
 if(WIN32)
     # Link libraries for Windows
-    
+    target_link_directories(wxWidgetDemo PRIVATE
+        ${WXWIDGETS_LIB_DIR}
+        ${GLEW_LIB_DIR}
+    )
+
     target_link_libraries(wxWidgetDemo 
-        ${WXWIDGETS_LIB_DIR}/wxmsw32ud_core.lib
-        ${WXWIDGETS_LIB_DIR}/wxbase32ud.lib
-        ${WXWIDGETS_LIB_DIR}/wxmsw32ud_gl.lib
         # Windows system libraries
         comctl32.lib
         rpcrt4.lib
@@ -162,8 +182,15 @@ if(WIN32)
         wsock32.lib
         opengl32.lib
         glu32.lib
-        glm::glm
+        glew32.lib
     )
+    
+    # Link GLM if it was found, otherwise just include headers
+    if(glm_FOUND)
+        target_link_libraries(wxWidgetDemo glm::glm)
+    else()
+        target_include_directories(wxWidgetDemo PRIVATE ${GLM_INCLUDE_DIR})
+    endif()
 
 else()
     # Link libraries for Linux
@@ -185,19 +212,19 @@ set_target_properties(wxWidgetDemo PROPERTIES
 if(WIN32)
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_core_${WXGIDGETS_LIB_PREFIX}.dll"
+        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_core_${WXWIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WXWIDGETS_LIB_DIR}/wxbase32ud_${WXGIDGETS_LIB_PREFIX}.dll"
+        "${WXWIDGETS_LIB_DIR}/wxbase32ud_${WXWIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 
     add_custom_command(TARGET wxWidgetDemo POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_gl_${WXGIDGETS_LIB_PREFIX}.dll"
+        "${WXWIDGETS_LIB_DIR}/wxmsw32ud_gl_${WXWIDGETS_LIB_PREFIX}.dll"
         $<TARGET_FILE_DIR:wxWidgetDemo>
     )
 endif()

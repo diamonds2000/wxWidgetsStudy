@@ -118,7 +118,7 @@ void DrawingPanel::OnSize(wxSizeEvent& event)
     
     if (m_width > 0 && m_height > 0) 
     {
-        if (m_context && IsShownOnScreen()) 
+		if (m_context && IsShownOnScreen() && m_sceneGraph)
         {
             //SetCurrent(*m_context);
             m_sceneGraph->setupViewport(m_width, m_height);
