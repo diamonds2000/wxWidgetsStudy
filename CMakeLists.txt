@@ -23,9 +23,6 @@ endif()
 # SDK path configuration
 if(WIN32)
     # Windows - wxWidgets will be configured manually.
-	
-    # Windows-specific wxWidgets configuration
-    # Use environment variable WXWIDGETS or fallback to default path
     if(DEFINED ENV{WXWIDGETS})
         set(WXWIDGETS_ROOT "$ENV{WXWIDGETS}")
         message(STATUS "Using wxWidgets from environment variable: WXWIDGETS_ROOT")
@@ -59,13 +56,6 @@ if(WIN32)
     endif()
 
     set(GLM_INCLUDE_DIR "${GLM_ROOT}")
-
-    # Add include directories for Windows
-    include_directories(${WXWIDGETS_INCLUDE_DIR})
-    include_directories(${WXWIDGETS_VC_INCLUDE_DIR})
-
-    include_directories(${GLEW_INCLUDE_DIR})
-    include_directories(${GLM_INCLUDE_DIR})
 else()
     # Linux/Unix - try to find wxWidgets
     # First try the standard FindwxWidgets module
@@ -120,23 +110,7 @@ endif()
 
 # compiler flag configuration
 if(WIN32)
-    # Add preprocessor definitions for Windows
-    add_definitions(-DwxMSVC_VERSION_AUTO)
-    add_definitions(-DWXUSINGDLL -D__WXMSW__ -D__WXDEBUG__ -DwxUSE_UNICODE -D_UNICODE)
-
-    # MSVC compiler flags for debugging
-    set(CMAKE_CXX_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
-    set(CMAKE_C_FLAGS_DEBUG "/Zi /Od /RTC1 /MDd")
-    # Enable full debug info in PDB
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "/DEBUG /INCREMENTAL:NO")
-    
-    # MSVC compiler flags for release
-    set(CMAKE_CXX_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
-    set(CMAKE_C_FLAGS_RELEASE "/O2 /Ob2 /DNDEBUG /MD")
-    # Release linker flags
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "/INCREMENTAL:NO /OPT:REF /OPT:ICF")
+    # empty
 else()
     # GCC/Clang flags for debugging
     set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
@@ -167,6 +141,39 @@ add_executable(wxWidgetDemo ${WIN32_FLAG}
 
 # Platform-specific linking
 if(WIN32)
+    target_compile_definitions(wxWidgetDemo PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        _UNICODE
+        UNICODE
+        wxMSVC_VERSION_AUTO
+        wxUSE_UNICODE
+        WXUSINGDLL 
+        __WXMSW__ 
+        __WXDEBUG__ 
+    )
+
+    target_compile_options(wxWidgetDemo PRIVATE
+        $<$<CONFIG:Debug>:/Zi /Od /RTC1 /MDd>
+        $<$<CONFIG:Release>:/O2 /Ob2 /DNDEBUG /MD>
+    )
+
+    target_link_options(wxWidgetDemo PRIVATE
+        $<$<CONFIG:Debug>:/DEBUG /INCREMENTAL:NO>
+        $<$<CONFIG:Release>:/INCREMENTAL:NO /OPT:REF /OPT:ICF>
+    )
+
+    set_property(TARGET wxWidgetDemo PROPERTY
+        MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+    )
+
+    # Add include directories for Windows
+    target_include_directories(wxWidgetDemo PRIVATE
+        ${WXWIDGETS_INCLUDE_DIR}
+        ${WXWIDGETS_VC_INCLUDE_DIR}
+        ${GLEW_INCLUDE_DIR}
+        ${GLM_INCLUDE_DIR}
+    )
+
     # Link libraries for Windows
     target_link_directories(wxWidgetDemo PRIVATE
         ${WXWIDGETS_LIB_DIR}
@@ -184,13 +191,6 @@ if(WIN32)
         glu32.lib
         glew32.lib
     )
-    
-    # Link GLM if it was found, otherwise just include headers
-    if(glm_FOUND)
-        target_link_libraries(wxWidgetDemo glm::glm)
-    else()
-        target_include_directories(wxWidgetDemo PRIVATE ${GLM_INCLUDE_DIR})
-    endif()
 
 else()
     # Link libraries for Linux

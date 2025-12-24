@@ -16,17 +16,11 @@ This is a comprehensive demo application showcasing various wxWidgets features a
 
 ## Prerequisites
 
-Before building this application, you need to have wxWidgets installed at `D:\DevCode\wxWidgets`.
+Before building this application, you need to set a few environment variables:
+- WXWIDGETS to the wxWidgets installation location.
+- GLEW_ROOT to the glew installation location.
+- GLM_ROOT to the glm installation location.
 
-### Manual wxWidgets Installation
-
-This project is configured to use wxWidgets installed at `D:\DevCode\wxWidgets`. Make sure you have:
-
-1. Downloaded wxWidgets from https://www.wxwidgets.org/downloads/
-2. Extracted it to `D:\DevCode\wxWidgets`
-3. Built the libraries using Visual Studio or your preferred compiler
-
-For detailed installation instructions, see `INSTALL.md`.
 
 ## Building the Application
 
@@ -40,7 +34,7 @@ cd build
 
 2. Configure the project:
 ```powershell
-cmake .. -DwxWidgets_ROOT_DIR=D:\DevCode\wxWidgets
+cmake .. -G "Visual Studio 12 2013 Win64"
 ```
 
 3. Build the application:
