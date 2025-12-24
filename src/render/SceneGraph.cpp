@@ -28,7 +28,10 @@ void SceneGraph::init()
 
 void SceneGraph::setup()
 {
-    Shader::GetDefaultShader()->setCurrent();
+    if (RENDER_METHOD == RENDER_VAO)
+    {
+        Shader::GetDefaultShader()->setCurrent();
+    }
 
     glEnable(GL_LINE_SMOOTH);              // Anti-aliased lines
     glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
@@ -95,7 +98,10 @@ void SceneGraph::setupCamera()
     //           (double)targetPos[0], (double)targetPos[1], (double)targetPos[2],
     //           (double)upVec[0], (double)upVec[1], (double)upVec[2]);
 
-    Shader::GetDefaultShader()->setUniformVec3f("viewPos", eyePos);
+    if (RENDER_METHOD == RENDER_VAO)
+    {
+        Shader::GetDefaultShader()->setUniformVec3f("viewPos", eyePos);
+    }
 }
 
 void SceneGraph::render()

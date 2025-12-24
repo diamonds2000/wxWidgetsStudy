@@ -14,7 +14,7 @@ EVT_LEFT_DOWN(DrawingPanel::OnMouseDown)
 EVT_MOTION(DrawingPanel::OnMouseMove)
 EVT_LEFT_UP(DrawingPanel::OnMouseUp)
 EVT_SIZE(DrawingPanel::OnSize)
-EVT_TIMER(-1, DrawingPanel::OnTimer)
+//EVT_TIMER(-1, DrawingPanel::OnTimer)
 wxEND_EVENT_TABLE()
 
 DrawingPanel::DrawingPanel(wxWindow* parent)
@@ -88,7 +88,7 @@ void DrawingPanel::InitializeOpenGL()
     m_sceneGraph->setupViewport(m_width, m_height);
     m_sceneGraph->buildScene();
 
-    m_Timer->Start(32); // Approx. 30 FPS
+    //m_Timer->Start(32); // Approx. 30 FPS
 }
 
 void DrawingPanel::OnPaint(wxPaintEvent& event)
