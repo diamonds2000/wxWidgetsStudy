@@ -70,35 +70,6 @@ else()
     if(NOT glm_FOUND)
         message(FATAL_ERROR "GLM is not found")
     endif()
-
-    include_directories(${GLEW_INCLUDE_DIRS})
-    
-    if(wxWidgets_FOUND)
-        # Use standard FindwxWidgets
-        include(${wxWidgets_USE_FILE})
-        add_definitions(-D__WXGTK__)
-        add_definitions(-DwxUSE_UNICODE)
-    else()
-        # Fallback to pkg-config
-        find_package(PkgConfig)
-        if(PKG_CONFIG_FOUND)
-            pkg_check_modules(WXWIDGETS REQUIRED wx_gtk3u_core-3.2 wx_baseu-3.2 wx_gtk3u_gl-3.2)
-            
-            # Add include directories for Linux
-            include_directories(${WXWIDGETS_INCLUDE_DIRS})
-            
-            # Add compiler flags for Linux
-            add_compile_options(${WXWIDGETS_CFLAGS_OTHER})
-            
-            # Add preprocessor definitions for Linux
-            add_definitions(-D__WXGTK__)
-        else()
-            message(FATAL_ERROR "Could not find wxWidgets. Please install:\n"
-                               "  Ubuntu/Debian: sudo apt-get install libwxgtk3.2-dev\n"
-                               "  Fedora: sudo dnf install wxGTK3-devel\n"
-                               "  Or set wxWidgets_ROOT_DIR manually")
-        endif()
-    endif()
 endif()
 
 
@@ -106,19 +77,6 @@ if(WIN32)
     set(WIN32_FLAG WIN32)
 else()
     set(WIN32_FLAG "")
-endif()
-
-# compiler flag configuration
-if(WIN32)
-    # empty
-else()
-    # GCC/Clang flags for debugging
-    set(CMAKE_CXX_FLAGS_DEBUG "-g -O0 -Wall")
-    set(CMAKE_C_FLAGS_DEBUG "-g -O0 -Wall")
-    
-    # GCC/Clang flags for release
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG -Wall")
 endif()
 
 add_executable(wxWidgetDemo ${WIN32_FLAG}
@@ -193,14 +151,28 @@ if(WIN32)
     )
 
 else()
-    # Link libraries for Linux
-    if(wxWidgets_FOUND)
-        # Use standard wxWidgets linking
-        target_link_libraries(wxWidgetDemo ${wxWidgets_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} glm::glm)
-    else()
-        # Use pkg-config libraries
-        target_link_libraries(wxWidgetDemo ${WXWIDGETS_LIBRARIES} ${OPENGL_LIBRARIES} ${GLEW_LIBRARIES} glm::glm)
-    endif()
+    target_compile_definitions(wxWidgetDemo PRIVATE
+        __WXGTK__
+        wxUSE_UNICODE
+    )
+
+    target_compile_options(wxWidgetDemo PRIVATE
+        $<$<CONFIG:Debug>:-g -O0>
+        $<$<CONFIG:Release>:-O3 -DNDEBUG>
+    )
+
+    target_include_directories(wxWidgetDemo PRIVATE
+        ${wxWidgets_INCLUDE_DIRS}
+        ${GLEW_INCLUDE_DIR}
+        ${GLM_INCLUDE_DIR}
+    )
+
+    target_link_libraries(wxWidgetDemo
+        ${wxWidgets_LIBRARIES} 
+        ${OPENGL_LIBRARIES} 
+        ${GLEW_LIBRARIES} 
+        glm::glm
+    )
 endif()
 
 # Set output directory
