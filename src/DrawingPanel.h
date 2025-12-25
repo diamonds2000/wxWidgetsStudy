@@ -10,6 +10,7 @@
 
 
 class SceneGraph;
+class SelectionBuffer;
 
 class DrawingPanel : public wxGLCanvas
 {
@@ -20,6 +21,10 @@ public:
     // Drawing controls
     void SetDrawingColor(const wxColour& color);
     void ClearDrawing();
+    
+    // Selection support
+    unsigned int GetObjectAtPosition(int x, int y);
+    void RenderForSelection();
 
 private:
     // OpenGL context
@@ -32,10 +37,12 @@ private:
     void OnMouseUp(wxMouseEvent& event);
     void OnSize(wxSizeEvent& event);
     void OnTimer(wxTimerEvent& event);
+    void OnKeyDown(wxKeyEvent& event);
 
     // Drawing state
     bool m_isDrawing;
     std::unique_ptr<SceneGraph> m_sceneGraph;
+    std::unique_ptr<SelectionBuffer> m_selectionBuffer;
 
     // OpenGL state
     bool m_needsRedraw;

@@ -93,6 +93,8 @@ add_executable(wxWidgetDemo ${WIN32_FLAG}
         src/render/RenderObject.cpp
         src/render/Sphere.cpp
         src/render/RenderObject.h
+        src/render/SelectionBuffer.cpp
+        src/render/SelectionBuffer.h
         src/gl/Shader.cpp
         src/gl/Shader.h
 )

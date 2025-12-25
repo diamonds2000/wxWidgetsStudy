@@ -22,7 +22,7 @@ public:
     ~SceneGraph();
 
     void init();
-    void render();
+    void render(bool selectionMode = false);
     void buildScene();
 
     void setupViewport(int width, int height);

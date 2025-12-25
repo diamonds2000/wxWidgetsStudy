@@ -15,6 +15,7 @@ public:
     virtual ~RenderObject();
 
     virtual void Render();
+    virtual void RenderSelection(); // Render with unique color IDs for selection
     virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
 
     virtual void buildGraphicsResources(); // e.g., VBOs, VAOs
@@ -47,6 +48,9 @@ public:
     void setPosition(const PointDouble3D& position);
 
     void createDefaultNormal();
+    
+    unsigned int getObjectID() const { return m_objectID; }
+    void setObjectID(unsigned int id) { m_objectID = id; }
 
 protected:
     std::string m_name;
@@ -58,6 +62,8 @@ protected:
 
     PointDouble3D m_color;
     PointDouble3D m_position;
+    
+    unsigned int m_objectID = 0; // Unique ID for selection
 
     std::vector<std::shared_ptr<RenderObject>> m_children;
 

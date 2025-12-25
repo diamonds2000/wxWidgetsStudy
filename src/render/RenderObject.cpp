@@ -222,9 +222,9 @@ void RenderObject::createDefaultNormal()
 
 void RenderObject::Render()
 {
-    glEnable(GL_COLOR_MATERIAL);
-    glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-    glEnable(GL_NORMALIZE);
+    // glEnable(GL_COLOR_MATERIAL);
+    // glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    // glEnable(GL_NORMALIZE);
 
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
@@ -260,6 +260,89 @@ void RenderObject::Render()
 
     glPopMatrix();
 }
+
+void RenderObject::RenderSelection()
+{
+    // For selection rendering, we render with a unique color ID
+    // Skip if this object has no geometry
+    if (m_vertices.empty())
+    {
+        return;
+    }
+    
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glTranslatef((GLfloat)m_position.x, (GLfloat)m_position.y, (GLfloat)m_position.z);
+    
+    // Only render this object's geometry if it has an ID and vertices
+    if (m_objectID > 0 && !m_vertices.empty())
+    {
+        // Convert object ID to RGB color
+        float selectionColor[3];
+        selectionColor[0] = ((m_objectID >> 16) & 0xFF) / 255.0f; // Red
+        selectionColor[1] = ((m_objectID >> 8) & 0xFF) / 255.0f;  // Green
+        selectionColor[2] = (m_objectID & 0xFF) / 255.0f;         // Blue
+        
+        if (RENDER_METHOD == RENDER_VAO)
+        {
+            // For VAO rendering with selection, we'll use a simplified approach
+            // Disable lighting by not setting light uniforms, just render with flat color
+            if (m_vao > 0)
+            {
+                GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
+                glGetFloatv(GL_PROJECTION_MATRIX, proj);
+                glGetFloatv(GL_MODELVIEW_MATRIX, model);
+                multiply4(proj, model, mvp);
+                
+                Shader* shader = Shader::GetDefaultShader();
+                shader->setUniformMat4f("mvp", mvp);
+                shader->setUniformMat4f("model", model);
+                
+                // Set light to black to effectively disable lighting contribution
+                // and rely only on object color
+                GLfloat noLight[3] = {0.0f, 0.0f, 0.0f};
+                shader->setUniformVec3f("lightColor", noLight);
+                
+                // We can't override vertex colors directly in VAO mode without shader changes
+                // For now, we'll fall back to immediate mode for selection
+                // This is a simpler solution that works immediately
+                glBindVertexArray(0); // Unbind VAO
+                
+                glColor3f(selectionColor[0], selectionColor[1], selectionColor[2]);
+                glBegin(GL_TRIANGLES);
+                for (const PointDouble3D& v : m_vertices)
+                {
+                    glVertex3d(v.x, v.y, v.z);
+                }
+                glEnd();
+            }
+        }
+        else
+        {
+            // For immediate mode, just set the color
+            glColor3f(selectionColor[0], selectionColor[1], selectionColor[2]);
+            
+            glBegin(GL_TRIANGLES);
+            for (const PointDouble3D& v : m_vertices)
+            {
+                glVertex3d(v.x, v.y, v.z);
+            }
+            glEnd();
+        }
+    }
+    
+    // Recursively render children for selection
+    for (const std::shared_ptr<RenderObject>& child : m_children)
+    {
+        if (child)
+        {
+            child->RenderSelection();
+        }
+    }
+    
+    glPopMatrix();
+}
+
 
 void RenderObject::RenderWithVAO()
 {

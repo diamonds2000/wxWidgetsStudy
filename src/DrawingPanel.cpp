@@ -3,6 +3,7 @@
 #include "gl/Shader.h"
 #include <GL/glu.h>
 #include "render/SceneGraph.h"
+#include "render/SelectionBuffer.h"
 
 // Request a GL canvas with a depth buffer and double buffering
 static int s_gl_attribs[] = { WX_GL_RGBA, WX_GL_DOUBLEBUFFER, WX_GL_DEPTH_SIZE, 24, 0 };
@@ -14,6 +15,7 @@ EVT_LEFT_DOWN(DrawingPanel::OnMouseDown)
 EVT_MOTION(DrawingPanel::OnMouseMove)
 EVT_LEFT_UP(DrawingPanel::OnMouseUp)
 EVT_SIZE(DrawingPanel::OnSize)
+EVT_KEY_DOWN(DrawingPanel::OnKeyDown)
 //EVT_TIMER(-1, DrawingPanel::OnTimer)
 wxEND_EVENT_TABLE()
 
@@ -87,6 +89,12 @@ void DrawingPanel::InitializeOpenGL()
     m_sceneGraph->init();
     m_sceneGraph->setupViewport(m_width, m_height);
     m_sceneGraph->buildScene();
+    
+    // Initialize selection buffer
+    m_selectionBuffer = std::make_unique<SelectionBuffer>();
+    if (!m_selectionBuffer->init(m_width, m_height)) {
+        std::cerr << "Failed to initialize selection buffer" << std::endl;
+    }
 
     //m_Timer->Start(32); // Approx. 30 FPS
 }
@@ -122,6 +130,11 @@ void DrawingPanel::OnSize(wxSizeEvent& event)
         {
             //SetCurrent(*m_context);
             m_sceneGraph->setupViewport(m_width, m_height);
+            
+            // Resize selection buffer to match viewport
+            if (m_selectionBuffer) {
+                m_selectionBuffer->resize(m_width, m_height);
+            }
         }
         m_needsRedraw = true;
         Refresh();
@@ -132,6 +145,17 @@ void DrawingPanel::OnSize(wxSizeEvent& event)
 
 void DrawingPanel::OnMouseDown(wxMouseEvent& event)
 {
+    wxPoint pos = event.GetPosition();
+    unsigned int objectID = GetObjectAtPosition(pos.x, pos.y);
+    
+    if (objectID > 0)
+    {
+        std::cout << "Selected object ID: " << objectID << " at position (" << pos.x << ", " << pos.y << ")" << std::endl;
+    }
+    else
+    {
+        std::cout << "No object selected at position (" << pos.x << ", " << pos.y << ")" << std::endl;
+    }
 }
 
 void DrawingPanel::OnMouseMove(wxMouseEvent& event)
@@ -173,6 +197,63 @@ void DrawingPanel::OnTimer(wxTimerEvent& event)
     m_sceneGraph->setLight(lightPos);
 
     Refresh();
+}
+
+void DrawingPanel::RenderForSelection()
+{
+    if (!m_selectionBuffer || !m_selectionBuffer->isValid() || !m_sceneGraph) {
+        return;
+    }
+    
+    SetCurrent(*m_context);
+    
+    // Bind selection buffer for off-screen rendering
+    m_selectionBuffer->bind();
+    m_selectionBuffer->clear();
+    
+    // Render scene with selection colors (pass true for selection mode)
+    m_sceneGraph->render(true);
+    
+    // Unbind and return to default framebuffer
+    m_selectionBuffer->unbind();
+}
+
+unsigned int DrawingPanel::GetObjectAtPosition(int x, int y)
+{
+    if (!m_selectionBuffer || !m_selectionBuffer->isValid()) {
+        return 0;
+    }
+    
+    // Read the object ID from the selection buffer
+    unsigned int objectID = m_selectionBuffer->readObjectID(x, y);
+    
+    return objectID;
+}
+
+void DrawingPanel::OnKeyDown(wxKeyEvent& event)
+{
+    int keyCode = event.GetKeyCode();
+    
+    // Press 'S' to save the selection buffer to file
+    if (keyCode == 'S' || keyCode == 's') {
+        if (m_selectionBuffer && m_selectionBuffer->isValid()) {
+            // Render to selection buffer first
+            RenderForSelection();
+            
+            // Save to file with timestamp or counter
+            static int counter = 0;
+            char filename[256];
+            snprintf(filename, sizeof(filename), "selection_buffer_%03d.ppm", counter++);
+            
+            if (m_selectionBuffer->saveToFile(filename)) {
+                wxLogMessage("Selection buffer saved to: %s", filename);
+            } else {
+                wxLogMessage("Failed to save selection buffer");
+            }
+        }
+    }
+    
+    event.Skip(); // Allow other handlers to process the event
 }
 
 

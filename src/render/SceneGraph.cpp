@@ -107,11 +107,18 @@ void SceneGraph::setupCamera()
     }
 }
 
-void SceneGraph::render()
+void SceneGraph::render(bool selectionMode)
 {
     // Clear color and depth buffers for 3D rendering
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f); // light grey background
+    
+    if (selectionMode) {
+        // For selection, use black background (ID 0 = no selection)
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    } else {
+        // Normal rendering: light grey background
+        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    }
 
     // If we have a 3D object, render it with a simple perspective camera
     if (m_rootObject)
@@ -138,7 +145,16 @@ void SceneGraph::render()
         //setupCamera();
 
         // Render the 3D scene
-        m_rootObject->Render();
+        if (selectionMode) {
+            // Disable lighting and texturing for selection rendering
+            if (RENDER_METHOD != RENDER_VAO) {
+                glDisable(GL_LIGHTING);
+            }
+            m_rootObject->RenderSelection();
+        } else {
+            // Normal rendering
+            m_rootObject->Render();
+        }
     }
 
     // Flush OpenGL commands
@@ -148,6 +164,7 @@ void SceneGraph::render()
 void SceneGraph::buildScene()
 {
     m_rootObject = std::make_unique<RenderObject>("RootObject");
+    m_rootObject->setObjectID(1); // Assign ID 1 to triangle
     m_rootObject->setVertices({
         PointDouble3D(0.0, 0.0, 0.0),
         PointDouble3D(0.0, 200.0, 0.0),
@@ -161,6 +178,7 @@ void SceneGraph::buildScene()
         });
 
     std::shared_ptr<Sphere> mySphere = std::make_shared<Sphere>("unit_sphere", 100.0 /* radius */, 32 /* slices */, 16 /* stacks */);
+    mySphere->setObjectID(2); // Assign ID 2 to sphere
     mySphere->setColors({ PointDouble3D(0.8, 0.2, 0.2) }); // Reddish color
     mySphere->setPosition(PointDouble3D(100.0, 100.0, 0.0));
     m_rootObject->addChild(mySphere);
