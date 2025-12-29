@@ -116,6 +116,8 @@ void DrawingPanel::OnPaint(wxPaintEvent& event)
 
     m_sceneGraph->render();
     SwapBuffers(); // Swap front and back buffers
+
+    RenderForSelection();
 }
 
 void DrawingPanel::OnSize(wxSizeEvent& event)
@@ -236,10 +238,8 @@ void DrawingPanel::OnKeyDown(wxKeyEvent& event)
     
     // Press 'S' to save the selection buffer to file
     if (keyCode == 'S' || keyCode == 's') {
-        if (m_selectionBuffer && m_selectionBuffer->isValid()) {
-            // Render to selection buffer first
-            RenderForSelection();
-            
+        if (m_selectionBuffer && m_selectionBuffer->isValid())
+        {
             // Save to file with timestamp or counter
             static int counter = 0;
             char filename[256];

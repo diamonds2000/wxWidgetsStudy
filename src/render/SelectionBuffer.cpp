@@ -6,6 +6,7 @@
 
 SelectionBuffer::SelectionBuffer()
     : m_fbo(0)
+    , m_prefbo(0)
     , m_colorTexture(0)
     , m_depthRenderbuffer(0)
     , m_width(0)
@@ -113,12 +114,12 @@ unsigned int SelectionBuffer::readObjectID(int x, int y)
     if (x < 0 || x >= m_width || y < 0 || y >= m_height) return 0;
     
     // Flip Y coordinate (OpenGL uses bottom-left origin)
-    //int flippedY = m_height - y - 1;
+    int flippedY = m_height - y - 1;
     
     bind();
     
     unsigned char pixel[3];
-    glReadPixels(x, m_height, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
+    glReadPixels(x, flippedY, 1, 1, GL_RGB, GL_UNSIGNED_BYTE, pixel);
     
     unbind();
     
@@ -168,21 +169,31 @@ bool SelectionBuffer::saveToFile(const char* filename)
         std::cerr << "SelectionBuffer::saveToFile - Invalid FBO or filename" << std::endl;
         return false;
     }
-    
-    // Allocate buffer for pixel data
-    std::vector<unsigned char> pixels(m_width * m_height * 3);
-    
+
     // Save current framebuffer binding
     GLint previousFBO = 0;
     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFBO);
-    
-    // Bind FBO and read pixels
+
+    // Bind FBO and ensure all rendering is complete before reading
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+    glFinish();  // Wait for all GL commands to complete
+
+    // Set pixel pack alignment to 1 for tightly packed data
+    GLint previousAlignment = 4;
+    glGetIntegerv(GL_PACK_ALIGNMENT, &previousAlignment);
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+    // Allocate buffer for pixel data (no padding needed with alignment=1)
+    std::vector<unsigned char> pixels(m_width * 3 * m_height);
+
+    // Read pixels from the FBO
     glReadPixels(0, 0, m_width, m_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
-    
-    // Restore previous framebuffer
+
+    // Restore previous alignment
+    glPixelStorei(GL_PACK_ALIGNMENT, previousAlignment);
+
     glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
-    
+
     // Check for OpenGL errors
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
@@ -192,33 +203,10 @@ bool SelectionBuffer::saveToFile(const char* filename)
     
     // Determine file format by extension
     std::string fname(filename);
-    bool isPNG = (fname.length() > 4 && fname.substr(fname.length() - 4) == ".png");
-    
-    if (isPNG) {
-        // PNG format using stb_image_write (if available)
-        #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
-            #include "stb_image_write.h"
-            // Flip vertically for correct orientation
-            std::vector<unsigned char> flipped(m_width * m_height * 3);
-            for (int y = 0; y < m_height; ++y) {
-                memcpy(&flipped[y * m_width * 3], 
-                       &pixels[(m_height - 1 - y) * m_width * 3], 
-                       m_width * 3);
-            }
-            return stbi_write_png(filename, m_width, m_height, 3, flipped.data(), m_width * 3) != 0;
-        #else
-            std::cerr << "SelectionBuffer::saveToFile - PNG not supported, saving as PPM" << std::endl;
-            // Fall through to PPM
-        #endif
-    }
-    
+
     // PPM format (simple, no dependencies)
     // Change extension to .ppm if needed
     std::string ppmFilename = fname;
-    if (isPNG) {
-        ppmFilename = fname.substr(0, fname.length() - 4) + ".ppm";
-    }
-    
     std::ofstream file(ppmFilename, std::ios::binary);
     if (!file.is_open()) {
         std::cerr << "SelectionBuffer::saveToFile - Failed to open file: " << ppmFilename << std::endl;
@@ -229,8 +217,10 @@ bool SelectionBuffer::saveToFile(const char* filename)
     file << "P6\n" << m_width << " " << m_height << "\n255\n";
     
     // Write pixel data (flip vertically for correct orientation)
-    for (int y = m_height - 1; y >= 0; --y) {
-        file.write(reinterpret_cast<const char*>(&pixels[y * m_width * 3]), m_width * 3);
+    int rowSize = m_width * 3;
+    for (int y = m_height - 1; y >= 0; --y)
+    {
+        file.write(reinterpret_cast<const char*>(&pixels[y * rowSize]), rowSize);
     }
     
     file.close();

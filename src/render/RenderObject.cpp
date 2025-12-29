@@ -267,6 +267,20 @@ void RenderObject::RenderSelection()
     // Skip if this object has no geometry
     if (m_vertices.empty())
     {
+        // Still need to render children even if this object has no vertices
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glTranslatef((GLfloat)m_position.x, (GLfloat)m_position.y, (GLfloat)m_position.z);
+        
+        for (const std::shared_ptr<RenderObject>& child : m_children)
+        {
+            if (child)
+            {
+                child->RenderSelection();
+            }
+        }
+        
+        glPopMatrix();
         return;
     }
     
@@ -302,19 +316,7 @@ void RenderObject::RenderSelection()
                 // and rely only on object color
                 GLfloat noLight[3] = {0.0f, 0.0f, 0.0f};
                 shader->setUniformVec3f("lightColor", noLight);
-                
-                // We can't override vertex colors directly in VAO mode without shader changes
-                // For now, we'll fall back to immediate mode for selection
-                // This is a simpler solution that works immediately
-                glBindVertexArray(0); // Unbind VAO
-                
-                glColor3f(selectionColor[0], selectionColor[1], selectionColor[2]);
-                glBegin(GL_TRIANGLES);
-                for (const PointDouble3D& v : m_vertices)
-                {
-                    glVertex3d(v.x, v.y, v.z);
-                }
-                glEnd();
+                shader->setUniformVec3f("objectColor", selectionColor);
             }
         }
         else

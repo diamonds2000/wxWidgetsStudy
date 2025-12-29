@@ -112,10 +112,13 @@ void SceneGraph::render(bool selectionMode)
     // Clear color and depth buffers for 3D rendering
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    if (selectionMode) {
+    if (selectionMode)
+    {
         // For selection, use black background (ID 0 = no selection)
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    } else {
+    }
+    else
+    {
         // Normal rendering: light grey background
         glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
     }
@@ -145,13 +148,17 @@ void SceneGraph::render(bool selectionMode)
         //setupCamera();
 
         // Render the 3D scene
-        if (selectionMode) {
+        if (selectionMode)
+        {
             // Disable lighting and texturing for selection rendering
-            if (RENDER_METHOD != RENDER_VAO) {
+            if (RENDER_METHOD != RENDER_VAO)
+            {
                 glDisable(GL_LIGHTING);
             }
             m_rootObject->RenderSelection();
-        } else {
+        }
+        else
+        {
             // Normal rendering
             m_rootObject->Render();
         }
