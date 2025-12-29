@@ -261,95 +261,16 @@ void RenderObject::Render()
     glPopMatrix();
 }
 
-void RenderObject::RenderSelection()
-{
-    // For selection rendering, we render with a unique color ID
-    // Skip if this object has no geometry
-    if (m_vertices.empty())
-    {
-        // Still need to render children even if this object has no vertices
-        glMatrixMode(GL_MODELVIEW);
-        glPushMatrix();
-        glTranslatef((GLfloat)m_position.x, (GLfloat)m_position.y, (GLfloat)m_position.z);
-        
-        for (const std::shared_ptr<RenderObject>& child : m_children)
-        {
-            if (child)
-            {
-                child->RenderSelection();
-            }
-        }
-        
-        glPopMatrix();
-        return;
-    }
-    
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glTranslatef((GLfloat)m_position.x, (GLfloat)m_position.y, (GLfloat)m_position.z);
-    
-    // Only render this object's geometry if it has an ID and vertices
-    if (m_objectID > 0 && !m_vertices.empty())
-    {
-        // Convert object ID to RGB color
-        float selectionColor[3];
-        selectionColor[0] = ((m_objectID >> 16) & 0xFF) / 255.0f; // Red
-        selectionColor[1] = ((m_objectID >> 8) & 0xFF) / 255.0f;  // Green
-        selectionColor[2] = (m_objectID & 0xFF) / 255.0f;         // Blue
-        
-        if (RENDER_METHOD == RENDER_VAO)
-        {
-            // For VAO rendering with selection, we'll use a simplified approach
-            // Disable lighting by not setting light uniforms, just render with flat color
-            if (m_vao > 0)
-            {
-                GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
-                glGetFloatv(GL_PROJECTION_MATRIX, proj);
-                glGetFloatv(GL_MODELVIEW_MATRIX, model);
-                multiply4(proj, model, mvp);
-                
-                Shader* shader = Shader::GetDefaultShader();
-                shader->setUniformMat4f("mvp", mvp);
-                shader->setUniformMat4f("model", model);
-                
-                // Set light to black to effectively disable lighting contribution
-                // and rely only on object color
-                GLfloat noLight[3] = {0.0f, 0.0f, 0.0f};
-                shader->setUniformVec3f("lightColor", noLight);
-                shader->setUniformVec3f("objectColor", selectionColor);
-            }
-        }
-        else
-        {
-            // For immediate mode, just set the color
-            glColor3f(selectionColor[0], selectionColor[1], selectionColor[2]);
-            
-            glBegin(GL_TRIANGLES);
-            for (const PointDouble3D& v : m_vertices)
-            {
-                glVertex3d(v.x, v.y, v.z);
-            }
-            glEnd();
-        }
-    }
-    
-    // Recursively render children for selection
-    for (const std::shared_ptr<RenderObject>& child : m_children)
-    {
-        if (child)
-        {
-            child->RenderSelection();
-        }
-    }
-    
-    glPopMatrix();
-}
-
-
 void RenderObject::RenderWithVAO()
 {
     if (m_vao == 0)
         return;
+
+    // Convert object ID to RGB color
+    float selectionColor[3];
+    selectionColor[0] = ((m_objectID >> 16) & 0xFF) / 255.0f; // Red
+    selectionColor[1] = ((m_objectID >> 8) & 0xFF) / 255.0f;  // Green
+    selectionColor[2] = (m_objectID & 0xFF) / 255.0f;         // Blue
 
     GLfloat proj[16]; GLfloat model[16]; GLfloat mvp[16];
     glGetFloatv(GL_PROJECTION_MATRIX, proj);
@@ -357,6 +278,7 @@ void RenderObject::RenderWithVAO()
     multiply4(proj, model, mvp);
     Shader::GetDefaultShader()->setUniformMat4f("mvp", mvp);
     Shader::GetDefaultShader()->setUniformMat4f("model", model);
+    Shader::GetDefaultShader()->setUniformVec3f("selectColor", selectionColor);
 
     glBindVertexArray(m_vao);
     glDrawArrays(GL_TRIANGLES, 0, (GLsizei)m_vertices.size());

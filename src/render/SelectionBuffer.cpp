@@ -6,9 +6,6 @@
 
 SelectionBuffer::SelectionBuffer()
     : m_fbo(0)
-    , m_prefbo(0)
-    , m_colorTexture(0)
-    , m_depthRenderbuffer(0)
     , m_width(0)
     , m_height(0)
 {
@@ -19,56 +16,12 @@ SelectionBuffer::~SelectionBuffer()
     cleanup();
 }
 
-bool SelectionBuffer::init(int width, int height)
+bool SelectionBuffer::init(GLuint fbo, int width, int height)
 {
-    if (width <= 0 || height <= 0) {
-        std::cerr << "SelectionBuffer::init - Invalid dimensions: " 
-                  << width << "x" << height << std::endl;
-        return false;
-    }
-    
-    cleanup(); // Clean up any existing resources
-    
+    m_fbo = fbo;
     m_width = width;
     m_height = height;
-    
-    // Generate framebuffer
-    glGenFramebuffers(1, &m_fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-    
-    // Create color texture for storing object IDs as colors
-    glGenTextures(1, &m_colorTexture);
-    glBindTexture(GL_TEXTURE_2D, m_colorTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_width, m_height, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    
-    // Attach color texture to FBO
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_colorTexture, 0);
-    
-    // Create depth renderbuffer (needed for proper depth testing during selection)
-    glGenRenderbuffers(1, &m_depthRenderbuffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, m_depthRenderbuffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_width, m_height);
-    
-    // Attach depth renderbuffer to FBO
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, m_depthRenderbuffer);
-    
-    // Check framebuffer completeness
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        std::cerr << "SelectionBuffer::init - Framebuffer not complete: " << status << std::endl;
-        cleanup();
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        return false;
-    }
-    
-    // Unbind framebuffer
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
-    std::cout << "SelectionBuffer initialized: " << m_width << "x" << m_height << std::endl;
+
     return true;
 }
 
@@ -77,8 +30,9 @@ void SelectionBuffer::resize(int width, int height)
     if (width == m_width && height == m_height) {
         return; // No change needed
     }
-    
-    init(width, height);
+
+    m_width = width;
+    m_height = height;
 }
 
 void SelectionBuffer::bind()
@@ -88,24 +42,15 @@ void SelectionBuffer::bind()
         return;
     }
 
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, (GLint*)&m_prefbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-    glViewport(0, 0, m_width, m_height);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
+    glReadBuffer(GL_COLOR_ATTACHMENT1);
 }
 
 void SelectionBuffer::unbind()
 {
-    glBindFramebuffer(GL_FRAMEBUFFER, m_prefbo);
-}
-
-void SelectionBuffer::clear()
-{
-    if (m_fbo == 0) return;
-    
-    bind();
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Black = no selection (ID 0)
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    unbind();
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glReadBuffer(GL_BACK);
 }
 
 unsigned int SelectionBuffer::readObjectID(int x, int y)
@@ -144,21 +89,6 @@ unsigned int SelectionBuffer::colorToObjectID(unsigned char r, unsigned char g, 
 
 void SelectionBuffer::cleanup()
 {
-    if (m_fbo != 0) {
-        glDeleteFramebuffers(1, &m_fbo);
-        m_fbo = 0;
-    }
-    
-    if (m_colorTexture != 0) {
-        glDeleteTextures(1, &m_colorTexture);
-        m_colorTexture = 0;
-    }
-    
-    if (m_depthRenderbuffer != 0) {
-        glDeleteRenderbuffers(1, &m_depthRenderbuffer);
-        m_depthRenderbuffer = 0;
-    }
-    
     m_width = 0;
     m_height = 0;
 }
@@ -171,12 +101,8 @@ bool SelectionBuffer::saveToFile(const char* filename)
     }
 
     // Save current framebuffer binding
-    GLint previousFBO = 0;
-    glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &previousFBO);
-
     // Bind FBO and ensure all rendering is complete before reading
-    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
-    glFinish();  // Wait for all GL commands to complete
+    bind();
 
     // Set pixel pack alignment to 1 for tightly packed data
     GLint previousAlignment = 4;
@@ -192,13 +118,12 @@ bool SelectionBuffer::saveToFile(const char* filename)
     // Restore previous alignment
     glPixelStorei(GL_PACK_ALIGNMENT, previousAlignment);
 
-    glBindFramebuffer(GL_FRAMEBUFFER, previousFBO);
+    unbind();
 
-    // Check for OpenGL errors
+    // Check for OpenGL errors GLenum
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
         std::cerr << "SelectionBuffer::saveToFile - OpenGL error: " << err << std::endl;
-        return false;
     }
     
     // Determine file format by extension

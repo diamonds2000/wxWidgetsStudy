@@ -86,13 +86,15 @@ void DrawingPanel::InitializeOpenGL()
     }
 
     m_sceneGraph = std::make_unique<SceneGraph>();
-    m_sceneGraph->init();
+    m_sceneGraph->init(m_width, m_height);
     m_sceneGraph->setupViewport(m_width, m_height);
     m_sceneGraph->buildScene();
-    
+
+    GLuint fbo = m_sceneGraph->getFBO();
+
     // Initialize selection buffer
     m_selectionBuffer = std::make_unique<SelectionBuffer>();
-    if (!m_selectionBuffer->init(m_width, m_height)) {
+    if (!m_selectionBuffer->init(fbo, m_width, m_height)) {
         std::cerr << "Failed to initialize selection buffer" << std::endl;
     }
 
@@ -116,8 +118,6 @@ void DrawingPanel::OnPaint(wxPaintEvent& event)
 
     m_sceneGraph->render();
     SwapBuffers(); // Swap front and back buffers
-
-    RenderForSelection();
 }
 
 void DrawingPanel::OnSize(wxSizeEvent& event)
@@ -199,25 +199,6 @@ void DrawingPanel::OnTimer(wxTimerEvent& event)
     m_sceneGraph->setLight(lightPos);
 
     Refresh();
-}
-
-void DrawingPanel::RenderForSelection()
-{
-    if (!m_selectionBuffer || !m_selectionBuffer->isValid() || !m_sceneGraph) {
-        return;
-    }
-    
-    SetCurrent(*m_context);
-    
-    // Bind selection buffer for off-screen rendering
-    m_selectionBuffer->bind();
-    m_selectionBuffer->clear();
-    
-    // Render scene with selection colors (pass true for selection mode)
-    m_sceneGraph->render(true);
-    
-    // Unbind and return to default framebuffer
-    m_selectionBuffer->unbind();
 }
 
 unsigned int DrawingPanel::GetObjectAtPosition(int x, int y)

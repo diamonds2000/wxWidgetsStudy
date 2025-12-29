@@ -4,6 +4,7 @@
 #include "../gl/Shader.h"
 #include <cassert>
 #include <cstring>
+#include <iostream>
 #include <algorithm> 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -21,8 +22,16 @@ SceneGraph::~SceneGraph()
 {
 }
 
-void SceneGraph::init()
+GLuint SceneGraph::getFBO()
 {
+    return m_fbo;
+}
+
+void SceneGraph::init(int width, int height)
+{
+    m_width = width;
+    m_height = height;
+
     setup();
 
     float lightPos[3] = { 500.0f, 500.0f, 500.0f };
@@ -45,6 +54,34 @@ void SceneGraph::setup()
     // Ensure polygons are filled (not wireframe) and disable face culling by default
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     glDisable(GL_CULL_FACE);
+
+    // Multiple Rendering Target (MRT) FBO setup
+    GLuint tex0, tex1;
+    glGenTextures(1, &tex0);
+    glBindTexture(GL_TEXTURE_2D, tex0);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glGenTextures(1, &tex1);
+    glBindTexture(GL_TEXTURE_2D, tex1);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+    glGenFramebuffers(1, &m_fbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex0, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, tex1, 0);
+
+    GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, drawBuffers);
+
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+    {
+        std::cout << "MRT FBO creation failed!" << std::endl;
+    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void SceneGraph::setupViewport(int width, int height)
@@ -52,7 +89,10 @@ void SceneGraph::setupViewport(int width, int height)
     m_width = width;
     m_height = height;
 
-    setupCamera();
+    if (m_fbo != 0)
+    {
+        setupCamera();
+    }
 }
 
 void SceneGraph::setLight(const float pos[3])
@@ -112,16 +152,15 @@ void SceneGraph::render(bool selectionMode)
     // Clear color and depth buffers for 3D rendering
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    if (selectionMode)
+    // Normal rendering: light grey background
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+
+    if (m_fbo == 0)
     {
-        // For selection, use black background (ID 0 = no selection)
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        return;
     }
-    else
-    {
-        // Normal rendering: light grey background
-        glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-    }
+
+    glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
 
     // If we have a 3D object, render it with a simple perspective camera
     if (m_rootObject)
@@ -147,25 +186,24 @@ void SceneGraph::render(bool selectionMode)
 
         //setupCamera();
 
-        // Render the 3D scene
-        if (selectionMode)
-        {
-            // Disable lighting and texturing for selection rendering
-            if (RENDER_METHOD != RENDER_VAO)
-            {
-                glDisable(GL_LIGHTING);
-            }
-            m_rootObject->RenderSelection();
-        }
-        else
-        {
-            // Normal rendering
-            m_rootObject->Render();
-        }
+        m_rootObject->Render();
     }
 
     // Flush OpenGL commands
     glFlush();
+
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, m_fbo);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+
+    glReadBuffer(GL_COLOR_ATTACHMENT0);
+    glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+    glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+    glReadBuffer(GL_BACK);
 }
 
 void SceneGraph::buildScene()

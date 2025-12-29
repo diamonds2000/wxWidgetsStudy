@@ -15,7 +15,7 @@ public:
     ~SelectionBuffer();
 
     // Initialize the FBO with given dimensions
-    bool init(int width, int height);
+    bool init(GLuint fbo, int width, int height);
     
     // Resize the selection buffer
     void resize(int width, int height);
@@ -25,9 +25,6 @@ public:
     
     // Unbind and return to default framebuffer
     void unbind();
-    
-    // Clear the selection buffer
-    void clear();
     
     // Read the object ID at given screen coordinates
     // Returns 0 if no object, otherwise the object ID
@@ -51,9 +48,6 @@ private:
     void cleanup();
     
     GLuint m_fbo;              // Framebuffer object
-    GLuint m_prefbo;            // Previous framebuffer binding
-    GLuint m_colorTexture;     // Color attachment (stores object IDs as colors)
-    GLuint m_depthRenderbuffer; // Depth attachment for proper depth testing
     
     int m_width;
     int m_height;

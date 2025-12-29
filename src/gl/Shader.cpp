@@ -32,8 +32,11 @@ in vec3 vFragPos;
 uniform vec3 viewPos;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
+uniform vec3 selectColor;
 
-out vec4 FragColor;
+layout(location = 0) out vec4 outScreenColor;
+layout(location = 1) out vec4 outSelectColor;
+
 void main() {
     vec3 lightDir = normalize(lightPos - vFragPos);
     float diff = max(dot(normalize(vNormal), lightDir), 0.0);
@@ -50,7 +53,8 @@ void main() {
 
     vec3 result = (diffuse + ambient + specular) * vColor;
 
-    FragColor = vec4(result, 1.0);
+    outScreenColor = vec4(result, 1.0);
+    outSelectColor = vec4(selectColor, 1.0);
 }
 )GLSL";
 

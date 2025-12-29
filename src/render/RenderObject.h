@@ -15,7 +15,6 @@ public:
     virtual ~RenderObject();
 
     virtual void Render();
-    virtual void RenderSelection(); // Render with unique color IDs for selection
     virtual bool getVolume(PointDouble3D& min, PointDouble3D& max) const;
 
     virtual void buildGraphicsResources(); // e.g., VBOs, VAOs

@@ -21,12 +21,14 @@ public:
     SceneGraph();
     ~SceneGraph();
 
-    void init();
+    void init(int width, int height);
     void render(bool selectionMode = false);
     void buildScene();
 
     void setupViewport(int width, int height);
     void setLight(const float pos[3]);
+
+    GLuint getFBO();
 
 private:
     void setup();
@@ -35,4 +37,5 @@ private:
     std::unique_ptr<RenderObject> m_rootObject;
     int m_width;
     int m_height;
+    GLuint m_fbo = 0;
 };
