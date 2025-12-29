@@ -59,12 +59,12 @@ void SceneGraph::setup()
     GLuint tex0, tex1;
     glGenTextures(1, &tex0);
     glBindTexture(GL_TEXTURE_2D, tex0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     glGenTextures(1, &tex1);
     glBindTexture(GL_TEXTURE_2D, tex1);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, m_width, m_height, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, m_width, m_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
     glGenFramebuffers(1, &m_fbo);
@@ -72,6 +72,13 @@ void SceneGraph::setup()
 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, tex0, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, tex1, 0);
+
+    // Create and attach depth renderbuffer
+    GLuint depthRbo;
+    glGenRenderbuffers(1, &depthRbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, depthRbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, m_width, m_height);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthRbo);
 
     GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
     glDrawBuffers(2, drawBuffers);
@@ -149,18 +156,17 @@ void SceneGraph::setupCamera()
 
 void SceneGraph::render(bool selectionMode)
 {
-    // Clear color and depth buffers for 3D rendering
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    // Normal rendering: light grey background
-    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
-
     if (m_fbo == 0)
     {
         return;
     }
 
+    // Bind FBO FIRST, then clear it
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
+    
+    // Set clear color, then clear
+    glClearColor(0.8f, 0.8f, 0.8f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // If we have a 3D object, render it with a simple perspective camera
     if (m_rootObject)
@@ -198,7 +204,7 @@ void SceneGraph::render(bool selectionMode)
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
     glReadBuffer(GL_COLOR_ATTACHMENT0);
-    glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+    glBlitFramebuffer(0, 0, m_width, m_height, 0, 0, m_width, m_height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
     glReadBuffer(GL_COLOR_ATTACHMENT0);
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
